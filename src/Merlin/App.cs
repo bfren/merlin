@@ -4,6 +4,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using System.Threading.Tasks;
+using Merlin.Extensions;
 using Merlin.Routing;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Logging;
@@ -43,7 +44,7 @@ public sealed class App
 			// log any failures
 			if (result is Failure f)
 			{
-				app.Logger.Log((LogLevel)f.Level, f.Message, f.Args);
+				app.Logger.Log(f.Level.ToMs(), f.Exception, f.Message, f.Args);
 
 				if (!ctx.Response.HasStarted)
 				{
