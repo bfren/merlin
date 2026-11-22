@@ -4,81 +4,59 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Check NuGet login without publishing
+        type: boolean
+        default: true
+
+env:
+  DOTNET_NOLOGO: true                     # Disable the .NET logo in the console output
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true # Disable the .NET first time experience to skip caching NuGet packages and speed up the build
+  DOTNET_CLI_TELEMETRY_OPTOUT: true       # Disable sending .NET CLI telemetry to Microsoft
+  PACKAGES_DIR: /home/runner/packages
 
 jobs:
-  restore-build-test-pack-push:
+  prepare:
+    uses: bfren/dotnet/.github/workflows/prepare.yml@main
+    with:
+      solution: "Merlin.slnx"
+  nuget:
+    needs: prepare
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # lets NuGet/login exchange a GitHub token for a 1-hour NuGet key
+      packages: write   # GitHub Packages push
     steps:
     -
-      name: Prepare - Checkout Code
-      uses: actions/checkout@v3
-    -
-      name: Prepare - Read Version
-      uses: bfren/read-file@v2
+      name: Retrieve
+      uses: actions/download-artifact@v8
       with:
-        file: ./Version
-      id: version
+        name: nupkgs # uploaded by bfren/dotnet prepare.yml
+        path: ${{ env.PACKAGES_DIR }}
     -
-      name: Prepare - Setup .NET
-      uses: actions/setup-dotnet@v3
+      name: NuGet login # must run from this repo's own workflow file - NuGet rejects logins from shared workflows
+      uses: NuGet/login@v1
+      id: login
       with:
-        dotnet-version:
-          7.0.x
+        user: ${{ secrets.NUGET_USER }}
     -
-      name: A - Restore
+      if: ${{ !inputs.dry_run }} # inputs.dry_run is empty on release, so this pushes
+      name: Push
       run: |
-        dotnet restore Test.csproj
-    -
-      name: B - Build
-      run: |
-        dotnet build Test.csproj \
-          --no-restore \
-          --configuration Release
-    -
-      name: C - Test
-      run: |
-        dotnet test Test.csproj \
-          --no-restore \
-          --no-build \
-          --configuration Release
-    -
-      if: success()
-      name: D - Pack
-      run: |
-        dotnet pack Pack.csproj \
-          --no-build \
-          --configuration Release \
-          /p:PackageOutputPath=$HOME/.nupkgs \
-          -p:PackageVersion=${{ steps.version.outputs.contents }}
-    -
-      if: success()
-      name: E - Push
-      run: |
-        dotnet nuget push "$HOME/.nupkgs/*.nupkg" \
+        dotnet nuget push "${{ env.PACKAGES_DIR }}/*.nupkg" \
           --skip-duplicate \
-          --api-key ${{ secrets.NUGET_API_KEY }} \
+          --api-key ${{ steps.login.outputs.NUGET_API_KEY }} \
           --source https://api.nuget.org/v3/index.json
-        dotnet nuget push "$HOME/.nupkgs/*.nupkg" \
+        dotnet nuget push "${{ env.PACKAGES_DIR }}/*.nupkg" \
           --skip-duplicate \
           --api-key ${{ secrets.GITHUB_TOKEN }} \
           --source https://nuget.pkg.github.com/bfren/index.json
-    -
-      if: success()
-      name: Finish - Success
-      uses: bfren/action-slack-notify@master
-      env:
-        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-        SLACK_USERNAME: Merlin (GitHub)
-        SLACK_MESSAGE: Publish Succeeded
-        SLACK_COLOR: good
-        SLACK_ICON: https://bfren.dev/img/logo-square-500x500.jpg
-    -
-      if: failure()
-      name: Finish - Failure
-      uses: bfren/action-slack-notify@master
-      env:
-        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-        SLACK_USERNAME: Merlin (GitHub)
-        SLACK_MESSAGE: Publish Failed
-        SLACK_COLOR: danger
-        SLACK_ICON: https://bfren.dev/img/logo-square-500x500.jpg
+  notify:
+    needs: [prepare, nuget]
+    if: always() && !inputs.dry_run # always(): otherwise this job is skipped when an earlier job fails, and the failure message is never sent
+    uses: bfren/dotnet/.github/workflows/notify.yml@main
+    with:
+      name: Merlin
+      results: ${{ toJSON(needs.*.result) }}
+    secrets: inherit

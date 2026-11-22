@@ -3,7 +3,7 @@
 
 	<!-- Standard Configuration -->
 	<PropertyGroup Label="Framework and Language">
-		<TargetFrameworks>net7.0</TargetFrameworks>
+		<TargetFrameworks>net11.0</TargetFrameworks>
 		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>
 	</PropertyGroup>
@@ -25,7 +25,7 @@
 
 	<!-- Get Paths to Files -->
 	<PropertyGroup>
-		<SolutionFilePath>$([MSBuild]::GetPathOfFileAbove('Merlin.sln'))</SolutionFilePath>
+		<SolutionFilePath>$([MSBuild]::GetPathOfFileAbove('Merlin.slnx'))</SolutionFilePath>
 		<SolutionRootPath>$([System.IO.Path]::GetDirectoryName('$(SolutionFilePath)'))</SolutionRootPath>
 	</PropertyGroup>
 	<PropertyGroup>
@@ -64,8 +64,8 @@
 		<PackageLicenseFile>$(LicenceFile)</PackageLicenseFile>
 		<PackageProjectUrl>https://github.com/bfren/merlin/wiki</PackageProjectUrl>
 		<PackageReadmeFile>$(ReadmeFile)</PackageReadmeFile>
-		<PackageTags>async;C#;Either Type;Exception Handling;LINQ;Maybe Type;Monad;None;null;Option Type;Some</PackageTags>
-		<RepositoryUrl>https://github.com/bfren/merling</RepositoryUrl>
+		<PackageTags>Web Server</PackageTags>
+		<RepositoryUrl>https://github.com/bfren/merlin</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 		<Version>$(MerlinVersion)</Version>
 	</PropertyGroup>
@@ -81,10 +81,10 @@
 			5. Cleanup
 	-->
 	<Import Project="$(LocalPackPath)" Condition="Exists('$(LocalPackPath)') and '$(Configuration)'=='Release'"/>
-	<!--<PropertyGroup Label="Local Package Validation" Condition="Exists('$(LocalPackPath)') and '$(Configuration)'=='Release'">
-		<EnablePackageValidation>true</EnablePackageValidation>
-		<PackageValidationBaselineVersion>9.2.0</PackageValidationBaselineVersion>
-	</PropertyGroup>-->
+	<PropertyGroup Label="Local Package Validation" Condition="Exists('$(LocalPackPath)') and '$(Configuration)'=='Release'">
+		<EnablePackageValidation>false</EnablePackageValidation>
+		<PackageValidationBaselineVersion>1.0.0</PackageValidationBaselineVersion>
+	</PropertyGroup>
 	<Target Name="PackAndPushToLocalNuget" AfterTargets="DispatchToInnerBuilds" Condition="Exists('$(LocalPackPath)') and '$(Configuration)'=='Release'">
 		<Exec Command="dotnet pack &quot;$(ProjectFileName)&quot; -p:PackageVersion=$(MerlinVersion) --no-build --configuration Release"/>
 		<Exec Command="nuget init &quot;$(MSBuildProjectDirectory)\bin\Release&quot; &quot;$(LocalNugetRepository)&quot;"/>

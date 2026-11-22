@@ -55,8 +55,7 @@ public sealed class HttpServer : IDisposable
 
 		// dispatch request
 		var request = context.Request;
-		var user = context.User;
-		var result = await router.DispatchAsync(request, user);
+		var result = await router.DispatchAsync(request);
 
 		// send result
 		using (var response = context.Response)

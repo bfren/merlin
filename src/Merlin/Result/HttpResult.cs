@@ -10,7 +10,7 @@ public abstract record class HttpResult
 {
 	public HttpStatusCode StatusCode { get; init; } = HttpStatusCode.OK;
 
-	public WebHeaderCollection Headers { get; } = new();
+	public WebHeaderCollection Headers { get; } = [];
 
 	protected HttpResult(string contentType)
 	{

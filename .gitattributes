@@ -1,0 +1,3 @@
+# Store and check out text files with LF on every OS, matching end_of_line in .editorconfig,
+# so IDE0055 (formatting) agrees on Windows, Linux runners and files written by tools
+* text=auto eol=lf

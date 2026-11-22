@@ -481,3 +481,8 @@ dotnet_diagnostic.CA1822.severity = none
 
 # IDE0072: Add missing cases.
 dotnet_diagnostic.IDE0072.severity = none
+
+[*]
+
+end_of_line = lf
+insert_final_newline = true
