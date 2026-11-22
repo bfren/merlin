@@ -1,28 +1,30 @@
 // Merlin: .NET HTTP Server.
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
-using System;
-using System.Net;
+using System.Collections.Generic;
 using System.Threading.Tasks;
-using Merlin.Result;
+using Merlin.Replies;
+using Microsoft.AspNetCore.Http;
+using Wrap;
 
 namespace Merlin.Routing;
 
 public sealed class Router
 {
-	//public static async Task<HttpResult> DispatchAsync(HttpListenerRequest request, IPrincipal? user)
-	//{
-	//	Console.WriteLine("Requested: {0}", request.Url);
-	//	return new TextResult(
-	//		string.Format(CultureInfo.InvariantCulture, "Hi, {0}!", request.QueryString["hello"])
-	//	);
-	//}
+	public delegate Task<Result<Reply>> ExecuteAsync(HttpContext context);
 
-	public Task<HttpResult> DispatchAsync(HttpListenerRequest request)
+	public Dictionary<string, ExecuteAsync> Routes { get; } =
+		[];
+
+	public async Task<Result<Reply>> DispatchAsync(HttpContext context)
 	{
-		Console.WriteLine("Requested: {0}", request.Url);
-		return Task.FromResult<HttpResult>(new JsonResult(
-			new { name = request.QueryString["hello"] }
-		));
+		var request = context.Request;
+
+		if (Routes.TryGetValue(request.Path, out var route))
+		{
+			return await route(context);
+		}
+
+		return R.Fail("Unable to find route.");
 	}
 }
