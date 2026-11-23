@@ -1,6 +1,7 @@
 // Merlin: .NET HTTP Server.
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
+using System;
 using System.Collections.Immutable;
 using System.IO;
 using System.Threading;
@@ -43,4 +44,10 @@ public abstract record class Reply
 	}
 
 	protected abstract Task WriteBodyAsync(Stream stream, CancellationToken cancellationToken);
+
+	public static Reply MethodNotAllowed(ImmutableArray<string> allowed) =>
+		throw new NotImplementedException();
+
+	public static Reply NotFound() =>
+		throw new NotImplementedException();
 }
