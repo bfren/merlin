@@ -1,15 +1,17 @@
 // Merlin: .NET HTTP Server.
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
+using System;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using System.Threading.Tasks;
 using Merlin.Extensions;
+using Merlin.Replies;
 using Merlin.Routing;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Wrap;
-using Wrap.Linq;
 
 namespace Merlin;
 
@@ -17,43 +19,60 @@ public sealed class App
 {
 	public WebApplicationBuilder Builder { get; }
 
-	public Router Router { get; }
+	public Router Router { get; } =
+		new();
 
 	internal JsonSerializerOptions Json { get; }
 
 	public App(string[] args, params IJsonTypeInfoResolver[] json)
 	{
 		Builder = WebApplication.CreateSlimBuilder(args);
-		Json = new() { TypeInfoResolver = JsonTypeInfoResolver.Combine([.. json]) };
-		Router = new();
+		Json = new()
+		{
+			TypeInfoResolver = JsonTypeInfoResolver.Combine([.. json]),
+			NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString
+		};
 	}
 
 	public Task StartAsync()
 	{
-		// build application
+		// build application and lock routes (no mapping once the application has started)
 		var app = Builder.Build();
+		Router.Lock();
+
+		// match and execute route for the current request
 		app.Run(async ctx =>
 		{
-			// dispatch requests via the Router and write to Response stream
-			var result = await (
-				from reply in Router.DispatchAsync(ctx)
-				from done in reply.WriteAsync(ctx.Response, ctx.RequestAborted)
-				select done
-			);
-
-			// log any failures
-			if (result is Failure f)
+			// 
+			var reply = Router.Match(ctx.Request.Method, ctx.Request.Path.Value ?? "/") switch
 			{
-				app.Logger.Log(f.Level.ToMs(), f.Exception, f.Message, f.Args);
+				Matched m =>
+					await RunAsync(m, ctx),
 
+				MethodNotAllowed n =>
+					Reply.MethodNotAllowed(n.Allowed),
+
+				NotFound =>
+					Reply.NotFound()
+			};
+
+			// if the request failed, log and return error reply
+			if (reply is Failure f)
+			{
+				app.Logger.Log(f);
 				if (!ctx.Response.HasStarted)
 				{
 					// write an error reply
 				}
 			}
+
+			// write reply to response etc
 		});
 
 		// run app
 		return app.RunAsync();
 	}
+
+	public Task<Result<Reply>> RunAsync(Matched route, HttpContext ctx) =>
+		throw new NotImplementedException();
 }
