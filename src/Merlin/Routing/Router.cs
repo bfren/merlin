@@ -1,30 +1,34 @@
 // Merlin: .NET HTTP Server.
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
+using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
-using Merlin.Replies;
-using Microsoft.AspNetCore.Http;
-using Wrap;
 
 namespace Merlin.Routing;
 
 public sealed class Router
 {
-	public delegate Task<Result<Reply>> ExecuteAsync(HttpContext context);
+	private bool locked;
 
-	public Dictionary<string, ExecuteAsync> Routes { get; } =
-		[];
+	private readonly Dictionary<string, Node> roots =
+		new(StringComparer.OrdinalIgnoreCase);
 
-	public async Task<Result<Reply>> DispatchAsync(HttpContext context)
+	private readonly Dictionary<string, Template> names =
+		new(StringComparer.Ordinal);
+
+	public ParamTypes Types { get; } = new();
+
+	internal void Add(string method, Template template, Handler handler)
 	{
-		var request = context.Request;
-
-		if (Routes.TryGetValue(request.Path, out var route))
+		if (locked)
 		{
-			return await route(context);
+			return;
 		}
-
-		return R.Fail("Unable to find route.");
 	}
+
+	public RouteMatch Match(string method, string path) =>
+		throw new NotImplementedException();
+
+	internal void Lock() =>
+		locked = true;
 }
