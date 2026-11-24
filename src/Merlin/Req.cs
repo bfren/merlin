@@ -18,7 +18,7 @@ public sealed record class Req(
 		Http.Request.Method;
 
 	public string Path =>
-		Http.Request.Path.Value ?? string.Empty;
+		Http.Request.Path.Value ?? "/";
 
 	public IQueryCollection Query =>
 		Http.Request.Query;

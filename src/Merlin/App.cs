@@ -1,7 +1,6 @@
 // Merlin: .NET HTTP Server.
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
-using System;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using System.Threading.Tasks;
@@ -43,7 +42,7 @@ public sealed class App
 		// match and execute route for the current request
 		app.Run(async ctx =>
 		{
-			// 
+			// match
 			var reply = Router.Match(ctx.Request.Method, ctx.Request.Path.Value ?? "/") switch
 			{
 				Matched m =>
@@ -73,6 +72,9 @@ public sealed class App
 		return app.RunAsync();
 	}
 
-	public Task<Result<Reply>> RunAsync(Matched route, HttpContext ctx) =>
-		throw new NotImplementedException();
+	public Task<Result<Reply>> RunAsync(Matched route, HttpContext ctx)
+	{
+		var req = new Req(ctx, route.Values, Json);
+		return route.Handler(req);
+	}
 }

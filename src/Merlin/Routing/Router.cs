@@ -22,7 +22,7 @@ public sealed class Router
 	{
 		if (locked)
 		{
-			return;
+			throw new InvalidOperationException("Routes are locked - add new routes before the app starts.");
 		}
 	}
 
