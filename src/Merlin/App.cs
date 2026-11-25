@@ -8,7 +8,6 @@ using Merlin.Extensions;
 using Merlin.Replies;
 using Merlin.Routing;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Wrap;
 
@@ -69,7 +68,7 @@ public sealed class App
 			var reply = Router.Match(ctx.Request.Method, ctx.Request.Path.Value ?? "/") switch
 			{
 				Matched m =>
-					await RunAsync(m, ctx),
+					await m.Handler(new(ctx, m.Values, Json)),
 
 				MethodNotAllowed n =>
 					Reply.MethodNotAllowed(n.Allowed),
@@ -93,17 +92,5 @@ public sealed class App
 
 		// run app
 		return app.RunAsync();
-	}
-
-	/// <summary>
-	/// Run a matched route's handler with a <see cref="Req"/> built from the current request.
-	/// </summary>
-	/// <param name="route">The matched route.</param>
-	/// <param name="ctx">The current HTTP context.</param>
-	/// <returns>The handler's reply, or a failure.</returns>
-	public Task<Result<Reply>> RunAsync(Matched route, HttpContext ctx)
-	{
-		var req = new Req(ctx, route.Values, Json);
-		return route.Handler(req);
 	}
 }
