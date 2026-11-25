@@ -132,7 +132,7 @@ public sealed record class JsonReply<T>(T Content, JsonTypeInfo<T> Info) : Reply
 
 **Still to add**
 
-- Static helpers returning `Reply`, so `select` needs no cast: `Reply.Text(…)`, `Reply.Json(value, info)`, `Reply.NotFound()`, `Reply.MethodNotAllowed(allowed)` (sets `Allow`), `Reply.Problem(failure)`.
+- Static helpers, all returning `Result<Reply>` so every helper is a step in a Result chain: `Reply.Text(…)`, `Reply.Json(value, info)`, `Reply.NotFound()`, `Reply.MethodNotAllowed(allowed)` (sets `Allow`), `Reply.Error(failure)`. Use them with `from reply in Reply.Text(…) select reply` or `Bind`. `Text` and `Json` are done; the rest are stubs.
 - An empty-body reply for 204 and for `HEAD`.
 - Later: `FileReply`, `RedirectReply`.
 
@@ -206,11 +206,13 @@ public sealed record class Template(string Source, ImmutableArray<Segment> Segme
     public static Template Parse(string source, ParamTypes types) => ...;   // throws on invalid templates
 }
 
-public abstract record class Segment;
+public closed record class Segment;                                          // closed: switches over it are exhaustive
 public sealed record class Literal(string Value) : Segment;                 // posts
 public sealed record class Param(string Name, ParamType Type) : Segment;    // {id:int}, {slug}
-public sealed record class CatchAll(string Name) : Segment;                 // {*rest}
+public sealed record class CatchAll(string Name) : Segment;                 // {path:*}
 ```
+
+Every parameter has the same shape, `{name}` or `{name:type}`: the name comes first, and what follows the colon says what it matches. A catch-all is the special type `*` (`{path:*}`), allowed only as the last segment, and it captures the rest of the path as a string.
 
 **Typed parameters.** Each parameter has a type, resolved when the route is registered. Every supported type becomes a parser delegate built from `IParsable<T>`: generic calls are resolved at compile time, so this is AOT-safe. Values are parsed once, while matching, and stored typed.
 
@@ -247,7 +249,7 @@ public sealed class ParamTypes
 }
 ```
 
-`string` implements `IParsable<string>`, so untyped parameters need no special case. Custom types register the same way: `app.Router.Types.Add<PostId>("postid")` enables `{id:postid}`. Lower priority numbers are tried first.
+`string` implements `IParsable<string>`, so untyped parameters need no special case. Custom types register the same way: `app.Router.Types.Add<PostId>("postid")` enables `{id:postid}`. Lower priority numbers are tried first. The name \* is reserved: it marks a catch-all.
 
 **Trie and nodes.** A trie is a tree where each step down is one path segment; shared prefixes are stored once. One root per method means the walk only ever sees routes for that method.
 
@@ -268,30 +270,43 @@ internal sealed class Node
 **Router and builder**
 
 ```csharp
-public delegate Task<Result<Reply>> Handler(Req req, CancellationToken ct);
+public delegate Task<Result<Reply>> Handler(Req req);
 
 public sealed class Router
 {
-    private readonly Dictionary<string, Node> roots = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, Template> names = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Node> tries = [with(StringComparer.OrdinalIgnoreCase)];   // method -> root node
+    private readonly Dictionary<string, Template> names = [with(StringComparer.Ordinal)];
 
     public ParamTypes Types { get; } = new();
 
-    public RouteBuilder Map(string template, string? name = null) { ... }   // Template.Parse(template, Types), register name
-    internal void Add(string method, Template template, Handler handler) { ... }   // throws on duplicates and conflicts
+    public RouteBuilder Map(string source, string? name = null) { ... }   // Template.Parse(source, Types), register name
+    internal void Add(string method, Template template, Handler handler) { ... }   // called only by RouteBuilder
     public RouteMatch Match(string method, string path) { ... }
     internal void Lock() { ... }
 }
 
 public sealed class RouteBuilder(Router router, Template template)
 {
-    public RouteBuilder Get(Handler h)    => On(HttpMethods.Get, h);
-    public RouteBuilder Post(Handler h)   => On(HttpMethods.Post, h);
-    public RouteBuilder Put(Handler h)    => On(HttpMethods.Put, h);
-    public RouteBuilder Patch(Handler h)  => On(HttpMethods.Patch, h);
-    public RouteBuilder Delete(Handler h) => On(HttpMethods.Delete, h);
-    public RouteBuilder On(string method, Handler h) { router.Add(method, template, h); return this; }
+    public RouteBuilder Get(Handler h) => On(HttpMethods.Get, h);                         // async handler
+    public RouteBuilder Get(Func<Req, Result<Reply>> h) => Get(req => Task.FromResult(h(req)));   // sync handler
+    // Post, Put, Patch, Delete: the same pair of overloads
+
+    public RouteBuilder Map(string source, string? name = null) => router.Map(source, name);   // chain the next route
+
+    private RouteBuilder On(string method, Handler h) { router.Add(method, template, h); return this; }
 }
+```
+
+Registration flows one way: `Router.Map` parses the template (using the router's own `Types`) and returns a `RouteBuilder`; each `.Get`, `.Post` and so on calls `Router.Add`, which walks or creates nodes in that method's trie and puts the handler on the last one. A `Map` with no methods registers nothing.
+
+```csharp
+app.Router
+    .Map("/")
+        .Get(req => Reply.Text("Home"))
+    .Map("/hello/{name}")
+        .Get(req => from name in req.Route<string>("name")
+                    from text in Reply.Text($"Hello, {name}")
+                    select text);
 ```
 
 **Matching**
@@ -303,7 +318,7 @@ public sealed class RouteBuilder(Router router, Template template)
 5. `HEAD` falls back to the `GET` trie.
 
 ```csharp
-public abstract record class RouteMatch;
+public closed record class RouteMatch;
 public sealed record class Matched(Handler Handler, ImmutableDictionary<string, object> Values) : RouteMatch;   // typed values
 public sealed record class MethodNotAllowed(ImmutableArray<string> Allowed) : RouteMatch;
 public sealed record class NotFound : RouteMatch;
@@ -326,13 +341,13 @@ public sealed record class NotFound : RouteMatch;
 public sealed record class Req(
     HttpContext Http,                                  // escape hatch
     ImmutableDictionary<string, object> RouteValues,   // already parsed and typed by the router
-    JsonSerializerOptions Json                         // App.Json
+    JsonSerializerOptions JsonOptions                  // App.Json
 )
 {
     public string Method => Http.Request.Method;
     public string Path => Http.Request.Path.Value ?? "/";
     public IQueryCollection Query => Http.Request.Query;
-    public CancellationToken Aborted => Http.RequestAborted;
+    public CancellationToken Cancellation => Http.RequestAborted;
 }
 ```
 
@@ -359,7 +374,7 @@ public static async Task<Result<T>> Json<T>(this Req req, JsonTypeInfo<T> info)
     if (!req.Http.Request.HasJsonContentType()) return R.Fail("Request body is not JSON.");
     try
     {
-        var value = await JsonSerializer.DeserializeAsync(req.Http.Request.Body, info, req.Aborted);
+        var value = await JsonSerializer.DeserializeAsync(req.Http.Request.Body, info, req.Cancellation);
         return value is null ? R.Fail("Request body is empty.") : R.Wrap(value);
     }
     catch (JsonException e) { return R.Fail("Invalid JSON at {Path}.", e.Path); }
@@ -375,7 +390,7 @@ public static Task<Result<T>> Json<T>(this Req req) =>
 public static async Task<Result<T>> Form<T>(this Req req, JsonTypeInfo<T> info)
 {
     if (!req.Http.Request.HasFormContentType) return R.Fail("Request body is not a form.");
-    var form = await req.Http.Request.ReadFormAsync(req.Aborted);
+    var form = await req.Http.Request.ReadFormAsync(req.Cancellation);
 
     var buffer = new ArrayBufferWriter<byte>();
     using (var w = new Utf8JsonWriter(buffer))
@@ -401,11 +416,12 @@ public static async Task<Result<T>> Form<T>(this Req req, JsonTypeInfo<T> info)
 **A handler, end to end**
 
 ```csharp
-static Task<Result<Reply>> UpdatePost(Req req, CancellationToken ct) =>
+static Task<Result<Reply>> UpdatePost(Req req) =>
     from id   in req.Route<PostId>("id")
     from body in req.Json(AppJson.Default.PostDto)
-    from post in Posts.Update(id, body, ct)
-    select Reply.Json(post, AppJson.Default.Post);
+    from post in Posts.Update(id, body, req.Cancellation)
+    from reply in Reply.Json(post, AppJson.Default.Post)
+    select reply;
 ```
 
 Later binders follow the same pattern: `req.Header<T>`, `req.Cookie`, `req.Claim(...)`.
@@ -435,10 +451,10 @@ The biggest open decision is how a `Failure` tells the adapter "client's fault (
 - [ ] **Overlapping param types.** `42` parses as `int`, `long` and `string`. Reject overlapping numeric types at one node (suggested), or allow them with priority winning? Anything alongside `string` is allowed, as the deliberate fallback.
 - [ ] **Default param types.** Is `int`, `long`, `guid`, `bool`, `dateonly`, `string` the right built-in set? Add `decimal`, `double`, `datetime`?
 - [ ] **Compile-time typed handlers.** Handler and template agree only at runtime. A typed `Map`, e.g. `.Get<int>((req, id, ct) => …)`, would let the compiler check it, at the cost of more API. Revisit once the basics work.
-- [ ] **Handler signature.** Keep `CancellationToken` as a separate parameter, or drop it since `req.Aborted` already carries it?
+- [ ] **Handler signature (decided).** The separate `CancellationToken` parameter is dropped: handlers take only `Req`, and use `req.Cancellation`.
 - [ ] **`Req.Http` visibility.** Public escape hatch for now; make it internal once header, cookie and claim binders exist?
 - [ ] **Trailing slashes.** Is `/posts/` the same as `/posts`, a redirect, or a 404?
-- [ ] **Catch-all with zero segments.** Does `/files/{*path}` match `/files`, with `path` empty? Should a catch-all be typeable?
+- [ ] **Catch-all with zero segments.** Does `/files/{path:*}` match `/files`, with `path` empty? Currently no: the tests expect at least one segment.
 - [ ] **Route name scope.** Names unique per router, or per template plus method?
 - [ ] **Registration errors.** Throw (current choice), or collect them and fail `StartAsync` with a list?
 - [ ] **Optional parameters.** Support `{id:int?}`, or require two `Map` calls?
