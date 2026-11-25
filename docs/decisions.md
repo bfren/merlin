@@ -30,6 +30,12 @@ Broader open questions are listed at the end of `design-notes.md`; where an item
 | Error body format (also in design notes) | Not checked; the body must only leave out the failure's message and context | `Error_Tests.Does_Not_Write_Failure_Details` |
 | Cancellation in `Reply.WriteAsync`: should a cancelled token become a Failure (through `R.TryAsync`) or be let through? | Not tested | none |
 
+## Open: app adapter
+
+| Question | What the tests assume now | Tests |
+| --- | --- | --- |
+| How should tests reach the adapter? It is an inline lambda in `App.StartAsync`, and `App` keeps the built `WebApplication` private. Either pull out `internal Task Execute(HttpContext ctx, ILogger logger)` and test it with a `DefaultHttpContext`, or run end to end through `Microsoft.AspNetCore.TestHost`, which needs a workaround to reach the server and stop it | Not tested yet; waiting until the adapter writes replies | none |
+
 ## Open: binders
 
 | Question | What the tests assume now | Tests |
