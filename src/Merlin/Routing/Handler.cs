@@ -1,6 +1,7 @@
 // Merlin: .NET HTTP Server.
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
+using System.Threading.Tasks;
 using Merlin.Replies;
 using Wrap;
 
@@ -11,4 +12,4 @@ namespace Merlin.Routing;
 /// </summary>
 /// <param name="req">The request.</param>
 /// <returns>The reply to send, or a failure.</returns>
-public delegate Result<Reply> Handler(Req req);
+public delegate Task<Result<Reply>> Handler(Req req);
