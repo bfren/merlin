@@ -14,15 +14,34 @@ using Wrap;
 
 namespace Merlin;
 
+/// <summary>
+/// A Merlin application: builds a Kestrel host, holds the <see cref="Routing.Router"/> and JSON options,
+/// and dispatches each request to the handler of the route it matches.
+/// </summary>
 public sealed class App
 {
+	/// <summary>
+	/// The underlying ASP.NET Core builder - use it to configure hosting (ports, logging, services)
+	/// before calling <see cref="StartAsync"/>.
+	/// </summary>
 	public WebApplicationBuilder Builder { get; }
 
+	/// <summary>
+	/// The route table - map every route before calling <see cref="StartAsync"/>.
+	/// </summary>
 	public Router Router { get; } =
 		new();
 
+	/// <summary>
+	/// JSON options passed to every request, combining the application's source-generated resolvers.
+	/// </summary>
 	internal JsonSerializerOptions Json { get; }
 
+	/// <summary>
+	/// Create a Merlin application.
+	/// </summary>
+	/// <param name="args">Command-line arguments, passed to the ASP.NET Core builder.</param>
+	/// <param name="json">Source-generated JSON type resolvers (e.g. <c>AppJson.Default</c>) for every type the application reads or writes as JSON.</param>
 	public App(string[] args, params IJsonTypeInfoResolver[] json)
 	{
 		Builder = WebApplication.CreateSlimBuilder(args);
@@ -33,6 +52,10 @@ public sealed class App
 		};
 	}
 
+	/// <summary>
+	/// Build the host, lock the routes, and start handling requests.
+	/// </summary>
+	/// <returns>A task that completes when the application shuts down.</returns>
 	public Task StartAsync()
 	{
 		// build application and lock routes (no mapping once the application has started)
@@ -72,6 +95,12 @@ public sealed class App
 		return app.RunAsync();
 	}
 
+	/// <summary>
+	/// Run a matched route's handler with a <see cref="Req"/> built from the current request.
+	/// </summary>
+	/// <param name="route">The matched route.</param>
+	/// <param name="ctx">The current HTTP context.</param>
+	/// <returns>The handler's reply, or a failure.</returns>
 	public Task<Result<Reply>> RunAsync(Matched route, HttpContext ctx)
 	{
 		var req = new Req(ctx, route.Values, Json);

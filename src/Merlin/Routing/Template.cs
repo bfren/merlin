@@ -7,8 +7,20 @@ using System.Linq;
 
 namespace Merlin.Routing;
 
+/// <summary>
+/// A parsed and validated route template.
+/// </summary>
+/// <param name="Source">Template as written.</param>
+/// <param name="Segments">Parsed segments, in path order.</param>
 public sealed record class Template(string Source, ImmutableArray<Segment> Segments)
 {
+	/// <summary>
+	/// Parse and validate a route template.
+	/// </summary>
+	/// <param name="source">Route template, e.g. <c>/posts/{id:int}</c>.</param>
+	/// <param name="types">Param types the template can use.</param>
+	/// <returns>The parsed template.</returns>
+	/// <exception cref="InvalidOperationException">The template is invalid, uses an unknown param type, or repeats a parameter name.</exception>
 	public static Template Parse(string source, ParamTypes types)
 	{
 		// URL route parts are separated by /
@@ -34,6 +46,15 @@ public sealed record class Template(string Source, ImmutableArray<Segment> Segme
 		return new(source, segments);
 	}
 
+	/// <summary>
+	/// Parse one part of a route template.
+	/// </summary>
+	/// <param name="part">Template part (between slashes).</param>
+	/// <param name="isLast">Whether this is the last part (a catch-all must be).</param>
+	/// <param name="types">Param types the template can use.</param>
+	/// <param name="source">Route template, for error messages.</param>
+	/// <returns>The parsed segment.</returns>
+	/// <exception cref="InvalidOperationException">The part is invalid.</exception>
 	private static Segment ParseSegment(string part, bool isLast, ParamTypes types, string source) =>
 		part switch
 		{

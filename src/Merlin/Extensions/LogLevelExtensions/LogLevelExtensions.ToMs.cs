@@ -7,6 +7,15 @@ namespace Merlin.Extensions;
 
 internal static partial class LogLevelExtensions
 {
+	/// <summary>
+	/// Convert a Wrap log level to the equivalent Microsoft log level.
+	/// </summary>
+	/// <remarks>
+	/// Wrap's levels are bit flags and Microsoft's are sequential, so the values must be mapped, never cast.
+	/// Unknown levels map to <see cref="MsLevel.Warning"/>.
+	/// </remarks>
+	/// <param name="this">Wrap log level.</param>
+	/// <returns>The equivalent Microsoft log level.</returns>
 	internal static MsLevel ToMs(this Wrap.Logging.LogLevel @this) =>
 		@this switch
 		{

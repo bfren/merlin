@@ -6,6 +6,10 @@ using System.Collections.Generic;
 
 namespace Merlin.Routing;
 
+/// <summary>
+/// The route table: one trie per HTTP method, built from route templates at startup
+/// and walked for each request.
+/// </summary>
 public sealed class Router
 {
 	private bool locked;
@@ -16,9 +20,19 @@ public sealed class Router
 	private readonly Dictionary<string, Template> names =
 		[with(StringComparer.Ordinal)];
 
+	/// <summary>
+	/// Param types available to route templates - add custom types before mapping routes that use them.
+	/// </summary>
 	public ParamTypes Types { get; } =
 		new();
 
+	/// <summary>
+	/// Start mapping a route template - add handlers for each HTTP method with the returned builder.
+	/// </summary>
+	/// <param name="source">Route template, e.g. <c>/posts/{id:int}</c>.</param>
+	/// <param name="name">[Optional] Unique route name, for generating URLs.</param>
+	/// <returns>A builder to add handlers for each HTTP method.</returns>
+	/// <exception cref="InvalidOperationException">The router is locked, the template is invalid, or the name is already in use.</exception>
 	public RouteBuilder Map(string source, string? name = null)
 	{
 		// routes cannot be added once the application has started
@@ -37,6 +51,14 @@ public sealed class Router
 		return new(this, template);
 	}
 
+	/// <summary>
+	/// Add a handler to the end of a template's path through the trie for an HTTP method,
+	/// creating nodes as needed.
+	/// </summary>
+	/// <param name="method">HTTP method.</param>
+	/// <param name="template">Parsed route template.</param>
+	/// <param name="handler">Request handler.</param>
+	/// <exception cref="InvalidOperationException">The router is locked, the route is already mapped, or a parameter conflicts with an existing one.</exception>
 	internal void Add(string method, Template template, Handler handler)
 	{
 		// routes cannot be added once the application has started
@@ -76,6 +98,10 @@ public sealed class Router
 		}
 	}
 
+	/// <summary>
+	/// Throw if routes have been locked.
+	/// </summary>
+	/// <exception cref="InvalidOperationException">The router is locked.</exception>
 	private void EnsureUnlocked()
 	{
 		if (locked)
@@ -84,6 +110,14 @@ public sealed class Router
 		}
 	}
 
+	/// <summary>
+	/// Get the child node for a parameter, creating it if needed.
+	/// </summary>
+	/// <param name="node">Parent node.</param>
+	/// <param name="p">Parameter segment.</param>
+	/// <param name="source">Route template, for error messages.</param>
+	/// <returns>The child node.</returns>
+	/// <exception cref="InvalidOperationException">A parameter of the same type but a different name already exists here.</exception>
 	private static Node ParamChild(Node node, Param p, string source)
 	{
 		var existing = node.Params.FindIndex(x => x.Type.Name == p.Type.Name);
@@ -101,6 +135,15 @@ public sealed class Router
 		return created;
 	}
 
+	/// <summary>
+	/// Set the catch-all route on a node.
+	/// </summary>
+	/// <param name="node">Node.</param>
+	/// <param name="c">Catch-all segment.</param>
+	/// <param name="handler">Request handler.</param>
+	/// <param name="source">Route template, for error messages.</param>
+	/// <returns>The same node (a catch-all is always the last segment).</returns>
+	/// <exception cref="InvalidOperationException">A catch-all is already mapped here.</exception>
 	private static Node SetCatchAll(Node node, CatchAll c, Handler handler, string source)
 	{
 		if (node.CatchAll is not null)
@@ -112,9 +155,18 @@ public sealed class Router
 		return node;
 	}
 
+	/// <summary>
+	/// Match an HTTP method and path against the routes.
+	/// </summary>
+	/// <param name="method">HTTP method.</param>
+	/// <param name="path">Request path.</param>
+	/// <returns>The match result.</returns>
 	public RouteMatch Match(string method, string path) =>
 		throw new NotImplementedException();
 
+	/// <summary>
+	/// Prevent any more routes being added.
+	/// </summary>
 	internal void Lock() =>
 		locked = true;
 }

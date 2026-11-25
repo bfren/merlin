@@ -8,6 +8,12 @@ namespace Merlin.Extensions;
 
 public static partial class LoggerExtensions
 {
+	/// <summary>
+	/// Log a failure at its own level, with its exception, message template and arguments,
+	/// inside a scope named by its context (if it has one).
+	/// </summary>
+	/// <param name="logger">Logger.</param>
+	/// <param name="failure">Failure to log.</param>
 	public static void Log(this ILogger logger, Failure failure)
 	{
 		var level = failure.Level.ToMs();

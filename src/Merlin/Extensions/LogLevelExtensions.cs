@@ -3,4 +3,7 @@
 
 namespace Merlin.Extensions;
 
+/// <summary>
+/// Extension methods for <see cref="Wrap.Logging.LogLevel"/>.
+/// </summary>
 internal static partial class LogLevelExtensions;

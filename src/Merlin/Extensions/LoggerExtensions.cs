@@ -3,4 +3,7 @@
 
 namespace Merlin.Extensions;
 
+/// <summary>
+/// Extension methods for <see cref="Microsoft.Extensions.Logging.ILogger"/>.
+/// </summary>
 public static partial class LoggerExtensions;

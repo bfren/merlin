@@ -3,4 +3,7 @@
 
 namespace Merlin.Routing;
 
+/// <summary>
+/// No route matches the path.
+/// </summary>
 public sealed record class NotFound : RouteMatch;
