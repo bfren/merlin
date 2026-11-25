@@ -12,9 +12,9 @@ internal sealed class Node
 		new(StringComparer.OrdinalIgnoreCase);
 
 	public List<(string Name, ParamType Type, Node Node)> Params { get; } =
-		[];   // sorted by Type.Priority
+		[];
 
 	public (string Name, Handler Handler)? CatchAll { get; set; }
 
-	public Handler? Handler { get; set; }                                       // a route ends here
+	public Handler? Handler { get; set; }
 }

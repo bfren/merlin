@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Immutable;
 using System.IO;
+using System.Text.Json.Serialization.Metadata;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -45,9 +46,22 @@ public abstract record class Reply
 
 	protected abstract Task WriteBodyAsync(Stream stream, CancellationToken cancellationToken);
 
-	public static Reply MethodNotAllowed(ImmutableArray<string> allowed) =>
+	#region Static Helpers
+
+	public static Result<Reply> Error(Failure failure) =>
 		throw new NotImplementedException();
 
-	public static Reply NotFound() =>
+	public static Result<Reply> Json<T>(T content, JsonTypeInfo<T> info) =>
+		new JsonReply<T>(content, info);
+
+	public static Result<Reply> MethodNotAllowed(ImmutableArray<string> allowed) =>
 		throw new NotImplementedException();
+
+	public static Result<Reply> NotFound() =>
+		throw new NotImplementedException();
+
+	public static Result<Reply> Text(string content) =>
+		new TextReply(content);
+
+	#endregion
 }

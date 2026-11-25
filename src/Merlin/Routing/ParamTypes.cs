@@ -18,11 +18,21 @@ public sealed class ParamTypes
 		["string"] = ParamType.Create<string>("string", 100),   // the default for {name}
 	};
 
-	public void Add<T>(string name, int priority = 50) where T : IParsable<T> =>
-		types.Add(name, ParamType.Create<T>(name, priority));   // throws on duplicates
+	public void Add<T>(string name, int priority = 50) where T : IParsable<T>
+	{
+		// check for reserved names to avoid breaking segment parsing
+		var reserved = new[] { "*" };
+		if (reserved.Contains(name))
+		{
+			throw new InvalidOperationException($"Route param types cannot be {string.Join(',', reserved)}.");
+		}
+
+		// throws on adding a duplicate
+		types.Add(name, ParamType.Create<T>(name, priority));
+	}
 
 	internal ParamType Get(string name) =>
 		types.TryGetValue(name, out var t)
 			? t
-			: throw new InvalidOperationException($"Unknown route type '{name}'.");
+			: throw new InvalidOperationException($"Unknown route param type '{name}'.");
 }
