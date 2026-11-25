@@ -21,6 +21,24 @@ internal static class Helpers
 	}
 
 	/// <summary>
+	/// Build a request with a body, its content type (null for none) and JSON options
+	/// (by default resolving types from <see cref="BinderJson"/>).
+	/// </summary>
+	public static Req NewReq(string? contentType, string body, JsonSerializerOptions? options = null)
+	{
+		var http = new DefaultHttpContext();
+		http.Request.ContentType = contentType;
+		var bytes = System.Text.Encoding.UTF8.GetBytes(body);
+		http.Request.Body = new MemoryStream(bytes);
+		http.Request.ContentLength = bytes.Length;
+		return new(
+			http,
+			ImmutableDictionary<string, object>.Empty,
+			options ?? new JsonSerializerOptions { TypeInfoResolver = BinderJson.Default }
+		);
+	}
+
+	/// <summary>
 	/// The context a binder's failure should have.
 	/// </summary>
 	public static string? ContextOf(string function) =>
