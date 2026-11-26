@@ -8,6 +8,7 @@ using Merlin.Extensions;
 using Merlin.Replies;
 using Merlin.Routing;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Wrap;
 
@@ -63,36 +64,39 @@ public sealed class App
 		var app = Builder.Build();
 		Router.Lock();
 
-		// match and execute route for the current request
-		app.Run(async ctx =>
-		{
-			// match
-			var reply = Router.Match(ctx.Request.Method, ctx.Request.Path.Value ?? "/") switch
-			{
-				Matched m =>
-					await m.Handler(new(ctx, m.Values, Json)),
-
-				MethodNotAllowed n =>
-					Reply.MethodNotAllowed(n.Allowed),
-
-				NotFound =>
-					Reply.NotFound()
-			};
-
-			// if the request failed, log and return error reply
-			if (reply is Failure f)
-			{
-				app.Logger.Log(f);
-				if (!ctx.Response.HasStarted)
-				{
-					// write an error reply
-				}
-			}
-
-			// write reply to response etc
-		});
+		// add request handler middleware
+		app.Run(ctx => Adapter(ctx, app.Logger));
 
 		// run app
 		return app.RunAsync();
+	}
+
+	private async Task Adapter(HttpContext ctx, ILogger logger)
+	{
+		// match
+		var reply = Router.Match(ctx.Request.Method, ctx.Request.Path.Value ?? "/") switch
+		{
+			Matched m =>
+				await m.Handler(new(ctx, m.Values, Json)),
+
+			MethodNotAllowed n =>
+				Reply.MethodNotAllowed(n.Allowed),
+
+			NotFound =>
+				Reply.NotFound()
+		};
+
+		// if the request failed, log and return error reply
+		if (reply is Failure f)
+		{
+			logger.Log(f);
+			if (!ctx.Response.HasStarted)
+			{
+				// write an error reply
+			}
+		}
+
+		// write reply to response etc
+
 	}
 }
