@@ -38,6 +38,22 @@ public sealed class RouteBuilder(Router router, Template template)
 		Get(req => Task.FromResult(h(req)));
 
 	/// <summary>
+	/// Handle HEAD requests to this route with an asynchronous handler.
+	/// </summary>
+	/// <param name="h">Asynchronous request handler.</param>
+	/// <returns>This builder, to add more methods.</returns>
+	public RouteBuilder Head(Handler h) =>
+		On(HttpMethods.Head, h);
+
+	/// <summary>
+	/// Handle HEAD requests to this route with a synchronous handler.
+	/// </summary>
+	/// <param name="h">Synchronous request handler.</param>
+	/// <returns>This builder, to add more methods.</returns>
+	public RouteBuilder Head(Func<Req, Result<Reply>> h) =>
+		Head(req => Task.FromResult(h(req)));
+
+	/// <summary>
 	/// Handle POST requests to this route with an asynchronous handler.
 	/// </summary>
 	/// <param name="h">Asynchronous request handler.</param>
