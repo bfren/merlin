@@ -172,19 +172,38 @@ public class Match_Tests
 			Assert.IsType<NotFound>(result);
 		}
 
-		[Fact]
-		public void Decodes_Value()
+		// Kestrel decodes the path before Match sees it, except %2F, so Match does not decode again
+
+		[Theory]
+		[InlineData("/hello/Ben Green", "Ben Green")]
+		[InlineData("/hello/100%25", "100%25")]
+		[InlineData("/hello/a%2Fb", "a%2Fb")]
+		public void Does_Not_Decode_Value(string path, string expected)
 		{
 			// Arrange
 			var router = new Router();
 			router.Map("/hello/{name}").Get(NewHandler());
 
 			// Act
-			var result = router.Match("GET", "/hello/Ben%20Green");
+			var result = router.Match("GET", path);
 
 			// Assert
 			var matched = Assert.IsType<Matched>(result);
-			Assert.Equal("Ben Green", matched.Values["name"]);
+			Assert.Equal(expected, matched.Values["name"]);
+		}
+
+		[Fact]
+		public void Encoded_Slash_Does_Not_Split_Segment()
+		{
+			// Arrange
+			var router = new Router();
+			router.Map("/a/{x}/{y}").Get(NewHandler());
+
+			// Act
+			var result = router.Match("GET", "/a/b%2Fc");
+
+			// Assert
+			Assert.IsType<NotFound>(result);
 		}
 	}
 
@@ -220,6 +239,21 @@ public class Match_Tests
 			// Assert
 			var matched = Assert.IsType<Matched>(result);
 			Assert.Equal("readme.txt", matched.Values["path"]);
+		}
+
+		[Fact]
+		public void Keeps_Encoded_Slash()
+		{
+			// Arrange
+			var router = new Router();
+			router.Map("/files/{path:*}").Get(NewHandler());
+
+			// Act
+			var result = router.Match("GET", "/files/..%2F..%2Fsecret");
+
+			// Assert
+			var matched = Assert.IsType<Matched>(result);
+			Assert.Equal("..%2F..%2Fsecret", matched.Values["path"]);
 		}
 
 		[Fact]
@@ -337,6 +371,35 @@ public class Match_Tests
 			Assert.Equal("42/download", matched.Values["path"]);
 		}
 
+		[Theory]
+		[InlineData(true)]
+		[InlineData(false)]
+		public void Equal_Priority_Tie_Goes_To_Param_Added_First(bool shortFirst)
+		{
+			// Arrange
+			var router = new Router();
+			router.Types.Add<short>("short", priority: 10);   // same priority as int, and "42" parses as both
+			var shortHandler = NewHandler();
+			var intHandler = NewHandler();
+			if (shortFirst)
+			{
+				router.Map("/x/{s:short}").Get(shortHandler);
+				router.Map("/x/{i:int}").Get(intHandler);
+			}
+			else
+			{
+				router.Map("/x/{i:int}").Get(intHandler);
+				router.Map("/x/{s:short}").Get(shortHandler);
+			}
+
+			// Act
+			var result = router.Match("GET", "/x/42");
+
+			// Assert
+			var matched = Assert.IsType<Matched>(result);
+			Assert.Same(shortFirst ? shortHandler : intHandler, matched.Handler);
+		}
+
 		[Fact]
 		public void Does_Not_Depend_On_Registration_Order()
 		{
@@ -413,6 +476,72 @@ public class Match_Tests
 		}
 
 		[Fact]
+		public void Head_Falls_Back_To_Get_With_Params()
+		{
+			// Arrange
+			var router = new Router();
+			var handler = NewHandler();
+			router.Map("/posts/{id:int}").Get(handler);
+
+			// Act
+			var result = router.Match("HEAD", "/posts/42");
+
+			// Assert
+			var matched = Assert.IsType<Matched>(result);
+			Assert.Same(handler, matched.Handler);
+			Assert.Equal(42, matched.Values["id"]);
+		}
+
+		[Fact]
+		public void Explicit_Head_Beats_Get_Fallback()
+		{
+			// Arrange
+			var router = new Router();
+			var get = NewHandler();
+			var head = NewHandler();
+			router.Map("/posts").Get(get);
+			router.Map("/posts").Head(head);
+
+			// Act
+			var headResult = router.Match("HEAD", "/posts");
+			var getResult = router.Match("GET", "/posts");
+
+			// Assert
+			Assert.Same(head, Assert.IsType<Matched>(headResult).Handler);
+			Assert.Same(get, Assert.IsType<Matched>(getResult).Handler);
+		}
+
+		[Fact]
+		public void Head_Without_Get_Returns_MethodNotAllowed()
+		{
+			// Arrange
+			var router = new Router();
+			router.Map("/posts").Post(NewHandler());
+
+			// Act
+			var result = router.Match("HEAD", "/posts");
+
+			// Assert
+			var notAllowed = Assert.IsType<MethodNotAllowed>(result);
+			Assert.Equal(["POST"], notAllowed.Allowed);
+		}
+
+		[Fact]
+		public void Head_Does_Not_Make_Get_Allowed()
+		{
+			// Arrange
+			var router = new Router();
+			router.Map("/posts").Head(NewHandler());
+
+			// Act
+			var result = router.Match("GET", "/posts");
+
+			// Assert
+			var notAllowed = Assert.IsType<MethodNotAllowed>(result);
+			Assert.Equal(["HEAD"], notAllowed.Allowed);
+		}
+
+		[Fact]
 		public void Returns_MethodNotAllowed_With_Allowed_Methods()
 		{
 			// Arrange
@@ -424,7 +553,23 @@ public class Match_Tests
 
 			// Assert
 			var notAllowed = Assert.IsType<MethodNotAllowed>(result);
-			Assert.Equal(new[] { "GET", "PUT" }, notAllowed.Allowed.Order());
+			Assert.Equal(["GET", "HEAD", "PUT"], notAllowed.Allowed.Order());
+		}
+
+		[Fact]
+		public void Allowed_Methods_List_Head_Once_When_Mapped_Explicitly()
+		{
+			// Arrange
+			var router = new Router();
+			router.Map("/posts").Get(NewHandler());
+			router.Map("/posts").Head(NewHandler());
+
+			// Act
+			var result = router.Match("DELETE", "/posts");
+
+			// Assert
+			var notAllowed = Assert.IsType<MethodNotAllowed>(result);
+			Assert.Equal(["GET", "HEAD"], notAllowed.Allowed.Order());
 		}
 
 		[Fact]
@@ -440,7 +585,7 @@ public class Match_Tests
 
 			// Assert
 			var notAllowed = Assert.IsType<MethodNotAllowed>(result);
-			Assert.Equal(new[] { "GET" }, notAllowed.Allowed);
+			Assert.Equal(["GET", "HEAD"], notAllowed.Allowed.Order());
 		}
 	}
 

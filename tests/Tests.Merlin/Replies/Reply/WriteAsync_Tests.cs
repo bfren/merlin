@@ -51,7 +51,7 @@ public class WriteAsync_Tests
 
 			// Assert
 			Assert.Equal("text/plain; charset=utf-8", response.ContentType);
-			Assert.Equal("Merlin", response.Headers["Server"]);
+			Assert.Equal("Merlin", response.Headers.Server);
 			Assert.Equal("GNU Terry Pratchett", response.Headers["X-Clacks-Overhead"]);
 		}
 
@@ -77,14 +77,14 @@ public class WriteAsync_Tests
 			// Arrange
 			var response = new DefaultHttpContext().Response;
 			response.Body = new MemoryStream();
-			response.Headers["Server"] = "Kestrel";
+			response.Headers.Server = "Kestrel";
 			var reply = new TextReply(Rnd.Str);
 
 			// Act
 			await reply.WriteAsync(response, TestContext.Current.CancellationToken);
 
 			// Assert
-			var server = response.Headers["Server"];
+			var server = response.Headers.Server;
 			Assert.Equal("Merlin", Assert.Single(server));
 		}
 	}
@@ -136,7 +136,7 @@ public class WriteAsync_Tests
 
 			// Assert
 			Assert.Equal(StatusCodes.Status202Accepted, response.StatusCode);
-			Assert.Equal("Merlin", response.Headers["Server"]);
+			Assert.Equal("Merlin", response.Headers.Server);
 		}
 	}
 }

@@ -14,7 +14,7 @@ public class Log_Tests
 	/// </summary>
 	private sealed class TestLogger(LogLevel minimum = LogLevel.Trace) : ILogger
 	{
-		public record class Entry(
+		public sealed record class Entry(
 			LogLevel Level,
 			Exception? Exception,
 			string Message,
