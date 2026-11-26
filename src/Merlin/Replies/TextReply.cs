@@ -3,6 +3,7 @@
 
 using System.IO;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,6 +16,6 @@ namespace Merlin.Replies;
 public sealed record class TextReply(string? Content) : Reply("text/plain; charset=utf-8")
 {
 	/// <inheritdoc/>
-	protected override Task WriteBodyAsync(Stream stream, CancellationToken cancellationToken) =>
+	protected override Task WriteBodyAsync(Stream stream, JsonSerializerOptions json, CancellationToken cancellationToken) =>
 		stream.WriteAsync(Encoding.UTF8.GetBytes(Content ?? string.Empty), cancellationToken).AsTask();
 }

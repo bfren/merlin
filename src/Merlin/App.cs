@@ -28,8 +28,7 @@ public sealed class App
 	/// <summary>
 	/// The route table - map every route before calling <see cref="StartAsync"/>.
 	/// </summary>
-	public Router Router { get; } =
-		new();
+	public Router Router { get; }
 
 	/// <summary>
 	/// JSON options passed to every request, combining the application's source-generated resolvers with Merlin's own.
@@ -46,9 +45,12 @@ public sealed class App
 		Builder = WebApplication.CreateSlimBuilder(args);
 		Json = new()
 		{
-			TypeInfoResolver = JsonTypeInfoResolver.Combine([.. json, MerlinJson.Default]),
-			NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString
+			NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString,
+			PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+			PropertyNameCaseInsensitive = true,
+			TypeInfoResolver = JsonTypeInfoResolver.Combine([.. json, MerlinJson.Default])
 		};
+		Router = new();
 	}
 
 	/// <summary>

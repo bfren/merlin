@@ -46,21 +46,27 @@ Broader open questions are listed at the end of `design-notes.md`; where an item
 | --- | --- | --- |
 | How should tests reach the adapter? It is an inline lambda in `App.StartAsync`, and `App` keeps the built `WebApplication` private. Either pull out `internal Task Execute(HttpContext ctx, ILogger logger)` and test it with a `DefaultHttpContext`, or run end to end through `Microsoft.AspNetCore.TestHost`, which needs a workaround to reach the server and stop it | Not tested yet; waiting until the adapter writes replies | none |
 
-## Open: JSON options
 
-Checked on 2026-11-26: when a source-generated context is used as the resolver for other options (as `App.Json` does), those options apply and the context's own `[JsonSourceGenerationOptions]` are ignored. A camelCase, ignore-nulls context wrote `{"firstName":"Ben"}` through its own type info, but `{"FirstName":"Ben","Age":null}` through App-style options. So `req.Json(AppJson.Default.Post)` and `req.Json<Post>()` can read the same body differently, and `AllowReadingFromString` in `App.Json` only applies to the overload without `info`.
+## JSON options (settled 2026-11-26)
+
+Checked on 2026-11-26: when a source-generated context is used as the resolver for other options (as `App.Json` does), those options apply and the context's own `[JsonSourceGenerationOptions]` are ignored. A camelCase, ignore-nulls context wrote `{"firstName":"Ben"}` through its own type info, but `{"FirstName":"Ben","Age":null}` through App-style options. So two routes to the same type can read and write it differently.
+
+- **`App.Json` holds the only options.** camelCase names, case-insensitive reads and numbers read from strings (the same as `JsonSerializerDefaults.Web`). Nulls are written; add `DefaultIgnoreCondition = WhenWritingNull` to leave them out. App contexts and `MerlinJson` only list types, with no `[JsonSourceGenerationOptions]`. Tests: `App/Json_Tests`.
+- **One path: all JSON goes through `App.Json`.** Type information is registered once, at startup, by the contexts passed to `new App(args, AppJson.Default)`. Binders and replies look types up there (`GetTypeInfo(typeof(T))`) instead of taking a `JsonTypeInfo<T>`, so `req.Json<T>()`, `req.Form<T>()` and `Reply.Json(value)` all use the same options. An unregistered type can only be found when the body is read or written (handlers are plain functions, so Merlin can't know their types at startup): the lookup throws `NotSupportedException`, which becomes a Failure (a logged 500). The `info` overloads are dropped, because an `info` taken straight from an app context carries that context's plain defaults (`FirstName`), not `App.Json`'s. Tests: `Json_Tests.Without_Info.*` stay; `Json_Tests.With_Info.*`, `Form_Tests` and `Reply/Json_Tests` change once the signatures do.
+- **Replies get the options when they are written, not when they are created.** `App.Json` is not static (each `App` has its own resolvers), so the adapter passes it in: `reply.WriteAsync(ctx.Response, Json, ctx.RequestAborted)`, which passes it on to `WriteBodyAsync`. `JsonReply<T>` then holds only the value. A reply stays a plain value that can be built anywhere. Tests: the reply tests pass their own options once the signature changes.
+
+## Open: writing replies
 
 | Question | Recommended | Tests |
 | --- | --- | --- |
-| One set of options for everything | `App.Json` holds the only options: naming policy, null handling, numbers from strings. `JsonSerializerDefaults.Web` is a good start (camelCase, case-insensitive reads, numbers from strings), plus `WhenWritingNull` if nulls should be left out. App contexts and `MerlinJson` only list types, with no `[JsonSourceGenerationOptions]` | none yet |
-| Binders and `Reply.Json` with an explicit `info` | Resolve through `App.Json` (`req.JsonOptions`), so the two overloads behave the same; the `info` passed in names the type but doesn't decide the options. `Reply.Json` would need the options passed in | `Json_Tests.Without_Info.Uses_Request_Options`; none yet compare the two overloads |
+| `WriteBodyAsync` is shared by every reply, but only `JsonReply` needs the JSON options | Pass the options to every reply and let the others ignore them (an unused parameter on an override is normal). If a second need appears (e.g. a `FileReply` wanting a file provider), replace the parameter with a small record such as `WriteContext(JsonSerializerOptions Json, ...)` | none yet |
 
 ## Open: binders
 
 | Question | What the tests assume now | Tests |
 | --- | --- | --- |
 | Repeated query key, e.g. `?tag=a&tag=b` | `Query<int>` fails and `QueryOrNone<int>` gives None. `Query<string>` returns `"a,b"` (from `ToString()` on all the values); not tested, as it may not be wanted | `Query_Tests.Failures.Repeated_Key_Returns_Failure_For_Int`, `QueryOrNone_Tests` |
-| Numbers in forms: does `Form` read numbers from strings itself, or rely on `JsonNumberHandling.AllowReadingFromString` in the options? | `Form` handles it itself; the test context leaves the option off. If it relies on the option, `Form(AppJson.Default.X)` won't read numbers unless the app's own context turns it on | `Form_Tests.Numbers.Binds_Number_From_String` |
+| Numbers in forms: does `Form` read numbers from strings itself, or rely on the options? | Answered by the one-path JSON decision: `Form` resolves through `App.Json`, which reads numbers from strings. The test context (`BinderJson`) does not, so `Binds_Number_From_String` must pass `App.Json`-like options once `Form` drops its `info` | `Form_Tests.Numbers.Binds_Number_From_String` |
 | Failure messages for `Json` and `Form` (e.g. "Request body is not JSON.", "Request body is empty.", "Invalid JSON at {Path}.", "Request body is not a form.") | Only checked as a Failure; exact text and the JSON path to be asserted once fixed | `Json_Tests`, `Form_Tests` |
 | Form: an array field that is left out | Not tested (`null` or an empty array?) | none |
 | Form: checkbox values other than `on`, `true` and `1` (e.g. `off`, `false`, `0`) | Not tested; only those three are expected to be true | `Form_Tests.Checkboxes` |

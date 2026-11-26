@@ -4,7 +4,7 @@
 using System;
 using System.Collections.Immutable;
 using System.IO;
-using System.Text.Json.Serialization.Metadata;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -44,12 +44,12 @@ public abstract record class Reply
 	/// <param name="response">HTTP response.</param>
 	/// <param name="cancellationToken">Cancellation token.</param>
 	/// <returns>True once the body has been written, or a failure if writing threw an exception.</returns>
-	public Task<Result<bool>> WriteAsync(HttpResponse response, CancellationToken cancellationToken)
+	public Task<Result<bool>> WriteAsync(HttpResponse response, JsonSerializerOptions json, CancellationToken cancellationToken)
 	{
 		SetHeaders(response);
 		return R.TryAsync(async () =>
 		{
-			await WriteBodyAsync(response.Body, cancellationToken);
+			await WriteBodyAsync(response.Body, json, cancellationToken);
 			return true;
 		});
 	}
@@ -73,7 +73,7 @@ public abstract record class Reply
 	/// <param name="stream">Response body stream.</param>
 	/// <param name="cancellationToken">Cancellation token.</param>
 	/// <returns>A task that completes when the body has been written.</returns>
-	protected abstract Task WriteBodyAsync(Stream stream, CancellationToken cancellationToken);
+	protected abstract Task WriteBodyAsync(Stream stream, JsonSerializerOptions json, CancellationToken cancellationToken);
 
 	#region Static Helpers
 
@@ -92,8 +92,8 @@ public abstract record class Reply
 	/// <param name="content">Value to serialise.</param>
 	/// <param name="info">Source-generated type information for <typeparamref name="T"/>.</param>
 	/// <returns>A JSON reply.</returns>
-	public static Result<Reply> Json<T>(T content, JsonTypeInfo<T> info) =>
-		new JsonReply<T>(content, info);
+	public static Result<Reply> Json<T>(T content) =>
+		new JsonReply<T>(content);
 
 	/// <summary>
 	/// Create a 405 Method Not Allowed reply, with an Allow header listing the methods the path does support.
@@ -117,7 +117,7 @@ public abstract record class Reply
 	/// <returns>A problem details reply.</returns>
 	public static Result<Reply> Problem(Problem problem)
 	{
-		var reply = new JsonReply<Problem>(problem, MerlinJson.Default.Problem);
+		var reply = new JsonReply<Problem>(problem);
 		return reply with
 		{
 			Headers = reply.Headers.SetItem("Content-Type", "application/problem+json"),
