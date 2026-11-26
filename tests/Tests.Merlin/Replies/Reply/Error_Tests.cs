@@ -1,6 +1,7 @@
 // Merlin: Unit Tests
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
+using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Wrap;
 using Wrap.Testing;
@@ -114,23 +115,118 @@ public class Error_Tests
 
 	public class Body
 	{
+		public static TheoryData<string> ClientKinds =>
+			[
+				nameof(FailureKind.Invalid),
+				nameof(FailureKind.Unauthenticated),
+				nameof(FailureKind.Forbidden),
+				nameof(FailureKind.NotFound),
+				nameof(FailureKind.Conflict),
+			];
+
+		public static TheoryData<string> ServerKinds =>
+			[
+				nameof(FailureKind.Unavailable),
+				nameof(FailureKind.Timeout),
+				nameof(FailureKind.Unexpected),
+				nameof(FailureKind.Unspecified),
+			];
+
+		private static async Task<JsonElement> ProblemAsync(Failure failure)
+		{
+			var (_, _, body) = await WriteAsync(Reply.Error(failure).AssertOk());
+			return JsonElement.Parse(body);
+		}
+
 		[Theory]
-		[MemberData(nameof(Status.Kinds), MemberType = typeof(Status))]
-		public async Task Does_Not_Write_Failure_Details(string kind, int _)
+		[MemberData(nameof(ClientKinds))]
+		public async Task Client_Error_Writes_Message_As_Detail(string kind)
 		{
 			// Arrange
 			var message = Rnd.Str;
-			var (type, function) = (Rnd.Str, Rnd.Str);
-			var failure = R.Fail(message).Ctx(type, function).Knd(Status.KindOf(kind));
-			var reply = Reply.Error(failure).AssertOk();
+			var failure = R.Fail(message).Knd(Status.KindOf(kind));
 
 			// Act
-			var (_, _, body) = await WriteAsync(reply);
+			var result = await ProblemAsync(failure);
 
 			// Assert
-			Assert.DoesNotContain(message, body);
-			Assert.DoesNotContain(type, body);
-			Assert.DoesNotContain(function, body);
+			Assert.Equal(message, result.GetProperty("detail").GetString());
+		}
+
+		[Theory]
+		[MemberData(nameof(ClientKinds))]
+		public async Task Client_Error_Detail_Fills_Named_Placeholders_From_Args_In_Order(string kind)
+		{
+			// Arrange
+			var (name, number) = (Rnd.Str, Rnd.Int);
+			var failure = R.Fail("Value {Name} is not {Number}.", name, number).Knd(Status.KindOf(kind));
+
+			// Act
+			var result = await ProblemAsync(failure);
+
+			// Assert
+			Assert.Equal($"Value {name} is not {number}.", result.GetProperty("detail").GetString());
+		}
+
+		[Theory]
+		[MemberData(nameof(ServerKinds))]
+		public async Task Server_Error_Leaves_Out_Detail(string kind)
+		{
+			// Arrange
+			var message = Rnd.Str;
+			var failure = R.Fail(message).Knd(Status.KindOf(kind));
+
+			// Act
+			var result = await ProblemAsync(failure);
+
+			// Assert
+			Assert.False(result.TryGetProperty("detail", out _));
+			Assert.DoesNotContain(message, result.GetRawText());
+		}
+
+		[Fact]
+		public async Task Custom_Kind_Leaves_Out_Detail()
+		{
+			// Arrange
+			var message = Rnd.Str;
+			var failure = R.Fail(message).Knd(new($"Tests.{Rnd.Str}"));
+
+			// Act
+			var result = await ProblemAsync(failure);
+
+			// Assert
+			Assert.False(result.TryGetProperty("detail", out _));
+			Assert.DoesNotContain(message, result.GetRawText());
+		}
+
+		[Fact]
+		public async Task Exception_Failure_Leaves_Out_Exception_Message()
+		{
+			// Arrange
+			var message = Rnd.Str;
+			var failure = new Failure(new InvalidOperationException(message));
+
+			// Act
+			var result = await ProblemAsync(failure);
+
+			// Assert
+			Assert.DoesNotContain(message, result.GetRawText());
+		}
+
+		[Theory]
+		[MemberData(nameof(Status.Kinds), MemberType = typeof(Status))]
+		public async Task Does_Not_Write_Context(string kind, int _)
+		{
+			// Arrange
+			var (type, function) = (Rnd.Str, Rnd.Str);
+			var failure = R.Fail(Rnd.Str).Ctx(type, function).Knd(Status.KindOf(kind));
+
+			// Act
+			var result = await ProblemAsync(failure);
+
+			// Assert
+			Assert.DoesNotContain(type, result.GetRawText());
+			Assert.DoesNotContain(function, result.GetRawText());
 		}
 	}
 }
