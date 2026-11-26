@@ -48,10 +48,10 @@ Open questions are listed at the end of `docs/design-notes.md` (failure kinds fo
 
 Follow the style of Ben's Wrap tests:
 
-- One file per method under test: `tests/Tests.Merlin/<Folder>/<Type>/<Method>_Tests.cs`.
+- One file per method under test: `tests/Tests.Merlin/<Folder>/<Type>/<Method>_Tests.cs`. When one grows large, make the class `partial` and move each nested scenario class to `<Method>_Tests.<Scenario>.cs`, keeping shared helpers in `<Method>_Tests.cs` (e.g. `Router/Match_Tests.Literals.cs`).
 - Namespace `Merlin.<Folder>.<Type>_Tests`; class `<Method>_Tests`; nested classes group scenarios; method names describe the behaviour (`Literal_Beats_Param`).
 - `// Arrange`, `// Act`, `// Assert` comments; `Rnd` for arbitrary values; `Substitute.For<Handler>()` for distinct handlers.
 - Prefer testing through the public API. Internals are visible to `Tests.Merlin` when needed.
 - File header: `// Merlin: Unit Tests` and `// Copyright (c) bfren - licensed under https://mit.bfren.dev/2022`.
 
-`tests/Tests.Merlin/Routing/Router/Match_Tests.cs` already exists (28 tests). It was written without being compiled or run, so start by building and running it.
+Tests for the unwritten code (`Router.Match`, the `Reply` helpers, the adapter in `App/StartAsync_Tests.cs`, the JSON and form binders) already exist: they build and fail with `NotImplementedException` until the code is written. Decisions that came up while writing tests, settled and open, are in `docs/decisions.md`.
