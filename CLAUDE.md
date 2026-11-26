@@ -31,7 +31,7 @@ The full design, with code shapes and open decisions, is in `docs/design-notes.m
 ## Settled decisions
 
 - Route templates: `/posts/{id:int}` (typed), `/posts/{slug}` (untyped = `string`), `/files/{path:*}` (catch-all, last segment only). `*` is a reserved param type name.
-- Matching: literal, then typed params by priority (lower first), then `string`, then catch-all, with backtracking. Registration order never matters, except to break a tie between sibling params whose types have the same priority: the param added first is tried first (`NodeParam.Order`). A value that doesn't parse means no match (404), not a 400. Literals and methods are case-insensitive; values are URL-decoded.
+- Matching: literal, then typed params by priority (lower first), then `string`, then catch-all, with backtracking. Registration order never matters, except to break a tie between sibling params whose types have the same priority: the param added first is tried first (`NodeParam.Order`). A value that doesn't parse means no match (404), not a 400. Literals, methods and route value names are case-insensitive. `Match` does not decode (Kestrel already has, except `%2F`). A catch-all needs at least one segment.
 - Registration errors (bad template, duplicate route or name, sibling param conflict, `Map` after start) throw at startup.
 - Not found and method not allowed are replies from the router, not Failures. Failures are logged (`ILogger.Log(Failure)`) and become error replies.
 - Handlers: one argument (`Req`); cancellation is `req.Cancellation`. `RouteBuilder` has sync overloads (`Func<Req, Result<Reply>>`) wrapped in `Task.FromResult`.
@@ -42,7 +42,7 @@ Done: templates and parsing, typed param types, registration into the tries, flu
 
 Not done yet (throw `NotImplementedException`): `Router.Match`, `Reply.Error`, `Reply.MethodNotAllowed`, `Reply.NotFound`. Also not started: writing the reply in `App`, the JSON and form binders, URL generation from route names.
 
-Open questions are listed at the end of `docs/design-notes.md` (failure kinds for 400 vs 500, error body format, trailing slash and zero-segment catch-all behaviour, and others). A proposal to add `FailureKind` to Wrap's `Failure` is with the Wrap project.
+Open questions are listed at the end of `docs/design-notes.md` and in `docs/decisions.md`, which also records the decisions settled while writing tests. A proposal to add `FailureKind` to Wrap's `Failure` is with the Wrap project.
 
 ## Test conventions
 

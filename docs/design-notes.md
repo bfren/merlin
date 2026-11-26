@@ -54,11 +54,11 @@ public sealed class App
     {
         var app = Builder.Build();
         Router.Lock();                                   // no Map after start
-        app.Run(ctx => Execute(app, ctx));
+        app.Run(ctx => Adapter(ctx, app));
         return app.RunAsync();
     }
 
-    private async Task Execute(WebApplication app, HttpContext ctx)
+    private async Task Adapter(HttpContext ctx, WebApplication app)
     {
         var reply = Router.Match(ctx.Request.Method, ctx.Request.Path.Value ?? "/") switch
         {
@@ -66,7 +66,8 @@ public sealed class App
             MethodNotAllowed n => Reply.MethodNotAllowed(n.Allowed),
             _                  => Reply.NotFound()
         };
-        // write reply; on Failure: log, and write an error reply if !ctx.Response.HasStarted
+        // write reply with Json (no body for HEAD); on Failure: log, and write an error reply if !ctx.Response.HasStarted
+        // a Cancelled failure or an aborted request: no error log, no reply
     }
 }
 ```
@@ -102,10 +103,11 @@ public abstract record class Reply
             .Add("Server", "Merlin")
             .Add("X-Clacks-Overhead", "GNU Terry Pratchett");
 
-    public Task<Result<bool>> WriteAsync(HttpResponse response, CancellationToken ct)
+    // json is App.Json, passed in by the adapter, so a reply is a plain value that can be built anywhere
+    public Task<Result<bool>> WriteAsync(HttpResponse response, JsonSerializerOptions json, CancellationToken ct)
     {
         SetHeaders(response);
-        return R.TryAsync(async () => { await WriteBodyAsync(response.Body, ct); return true; });
+        return R.TryAsync(async () => { await WriteBodyAsync(response.Body, json, ct); return true; });
     }
 
     protected virtual void SetHeaders(HttpResponse response)
@@ -114,26 +116,31 @@ public abstract record class Reply
         foreach (var (key, value) in Headers) response.Headers[key] = value;
     }
 
-    protected abstract Task WriteBodyAsync(Stream stream, CancellationToken ct);
+    protected abstract Task WriteBodyAsync(Stream stream, JsonSerializerOptions json, CancellationToken ct);
 }
 
 public sealed record class TextReply(string? Content) : Reply("text/plain; charset=utf-8")
 {
-    protected override Task WriteBodyAsync(Stream s, CancellationToken ct) =>
+    protected override Task WriteBodyAsync(Stream s, JsonSerializerOptions _, CancellationToken ct) =>
         s.WriteAsync(Encoding.UTF8.GetBytes(Content ?? ""), ct).AsTask();
 }
 
-public sealed record class JsonReply<T>(T Content, JsonTypeInfo<T> Info) : Reply("application/json")
+public sealed record class JsonReply<T>(T Content) : Reply("application/json")
 {
-    protected override Task WriteBodyAsync(Stream s, CancellationToken ct) =>
-        JsonSerializer.SerializeAsync(s, Content, Info, ct);
+    // an unregistered T throws NotSupportedException, which WriteAsync turns into a Failure (a logged 500)
+    protected override Task WriteBodyAsync(Stream s, JsonSerializerOptions json, CancellationToken ct) =>
+        JsonSerializer.SerializeAsync(s, Content, (JsonTypeInfo<T>)json.GetTypeInfo(typeof(T)), ct);
 }
 ```
 
+**Static helpers**, all returning `Result<Reply>` so every helper is a step in a Result chain: `Reply.Text(…)`, `Reply.Json(value)`, `Reply.Problem(problem)`, `Reply.NotFound()`, `Reply.MethodNotAllowed(allowed)`, `Reply.Error(failure)`. Use them with `from reply in Reply.Text(…) select reply` or `Bind`. `Text`, `Json` and `Problem` are done; the rest are stubs.
+
+- **Problem details.** 404, 405 and error replies are RFC 9457 problems (`application/problem+json`), written from the `Problem` record. Its members fix their own JSON names with attributes, so the format is the same under any options. `MethodNotAllowed` also sets `Allow`, joining the methods with `", "` in the order given (`Router.Match` sorts them).
+- **`HEAD`** has no reply of its own: the adapter writes the headers and leaves out the body.
+
 **Still to add**
 
-- Static helpers, all returning `Result<Reply>` so every helper is a step in a Result chain: `Reply.Text(…)`, `Reply.Json(value, info)`, `Reply.NotFound()`, `Reply.MethodNotAllowed(allowed)` (sets `Allow`), `Reply.Error(failure)`. Use them with `from reply in Reply.Text(…) select reply` or `Bind`. `Text` and `Json` are done; the rest are stubs.
-- An empty-body reply for 204 and for `HEAD`.
+- An empty-body reply for 204.
 - Later: `FileReply`, `RedirectReply`.
 
 ## Failures and logging
@@ -141,8 +148,9 @@ public sealed record class JsonReply<T>(T Content, JsonTypeInfo<T> Info) : Reply
 Expected outcomes are replies; a `Failure` means something went wrong. Every Failure is logged, and if the response hasn't started, it becomes an error reply.
 
 - **Not found / method not allowed** are produced by the router as replies (404 / 405 with `Allow`), never Failures.
-- **Default mapping:** Failure → 500 with a bland body. Details go to the log, never to the client. Apps can override it with a `Func<Failure, Reply>` on `App`.
-- **Exceptions** thrown outside `R.TryAsync` (e.g. inside a handler) should be caught at the adapter and treated as a 500 Failure.
+- **Default mapping:** `Reply.Error` takes the status from the failure's `FailureKind` (Wrap 2.0.0-beta.5): `Invalid` 400, `Unauthenticated` 401, `Forbidden` 403, `NotFound` 404, `Conflict` 409, `Unavailable` 503, `Timeout` 504, anything else 500. A 4xx problem's `detail` is the failure's message with its args filled in (binder messages are written for the client); a 5xx has no `detail`. Context and exceptions go to the log, never to the client. Apps could later override the mapping with a `Func<Failure, Reply>` on `App`.
+- **Cancellation is not an error.** A `Cancelled` failure, or any failure once `ctx.RequestAborted` is set, is not logged as an error and gets no reply.
+- **Exceptions** thrown outside `R.TryAsync` (e.g. inside a handler) are still open: see the open questions.
 - **`result is Failure f`** works: Wrap v2 hooks into C# union pattern matching through `HasValue` / `Value` / `TryGetValue`.
 
 **Logging extension.** It goes on `ILogger`, not `Failure`, so it works as a method group: `result.Audit(fFail: logger.Log)`.
@@ -311,11 +319,11 @@ app.Router
 
 **Matching**
 
-1. Split the path on `/`, dropping empty segments, and URL-decode each one.
-2. In the method's trie, at each node try the literal child first, then each parameter child in priority order: a parameter child matches only if its `TryParse` succeeds, and the parsed value is what's captured. Then try the catch-all (capture the rest as a string). Backtrack to the next candidate if a branch dead-ends.
-3. Path consumed at a node with a handler → `Matched(handler, values)`.
-4. Otherwise try the same path in the other methods' tries (on the miss path only): any hit → `MethodNotAllowed(allowed)`, none → `NotFound`.
-5. `HEAD` falls back to the `GET` trie.
+1. Split the path on `/`, dropping empty segments (so `//posts/` matches `/posts`). Don't decode: Kestrel's `Request.Path` is already decoded except `%2F`, so decoding again would decode twice, and keeping `%2F` encoded stops `..%2F..%2Fsecret` from splitting a segment or escaping a catch-all.
+2. In the method's trie, at each node try the literal child first, then each parameter child in priority order: a parameter child matches only if its `TryParse` succeeds, and the parsed value is what's captured. Then try the catch-all (capture the rest, at least one segment, as a string). Backtrack to the next candidate if a branch dead-ends.
+3. Path consumed at a node with a handler → `Matched(handler, values)`, with the values keyed case-insensitively.
+4. Otherwise try the same path in the other methods' tries (on the miss path only): any hit → `MethodNotAllowed(allowed)`, with `allowed` sorted; none → `NotFound`.
+5. `HEAD` uses an explicit `HEAD` mapping if there is one, else falls back to the `GET` trie. `allowed` lists `HEAD` once whenever `GET` or `HEAD` is mapped; an explicit `HEAD` alone does not make `GET` allowed.
 
 ```csharp
 public closed record class RouteMatch;
@@ -326,7 +334,8 @@ public sealed record class NotFound : RouteMatch;
 
 **Rules**
 
-- Precedence is structural: literal, then typed parameters by priority, then `string`, then catch-all. Registration order never changes behaviour.
+- Precedence is structural: literal, then typed parameters by priority, then `string`, then catch-all. Registration order never changes behaviour, except to break a tie between sibling params whose types have the same priority: the param added first is tried first (`NodeParam.Order`).
+- A catch-all needs at least one segment: `/files/{path:*}` doesn't match `/files`, and `/{path:*}` doesn't match `/`.
 - A value that doesn't parse means the route doesn't match: `/posts/abc` against `{id:int}` is a 404, not a 400. A path that doesn't parse isn't a resource.
 - Parameters of different types can be siblings at one node (`{id:int}` beside `{slug}`); the same type with different names at one node is a conflict.
 - Registration errors throw at startup: unbalanced braces, an unknown type, duplicate param names, a catch-all that isn't last, a duplicate method on a template, a sibling conflict, a reused route name, `Map` after `Lock`.
@@ -357,39 +366,37 @@ public sealed record class Req(
 public static Result<T> Route<T>(this Req req, string name) =>
     req.RouteValues.TryGetValue(name, out var v) && v is T value
         ? value
-        : R.Fail("Route value {Name} is not a {Type}.", name, typeof(T).Name);
+        : R.Fail("Route value {Name} is not a {Type}.", name, typeof(T).Name).Knd(FailureKind.Unexpected);
 
+// a repeated key uses the first value (v.ToString() would join them with commas)
 public static Result<T> Query<T>(this Req req, string name) where T : IParsable<T> =>
-    req.Query.TryGetValue(name, out var v) && T.TryParse(v.ToString(), CultureInfo.InvariantCulture, out var x)
-        ? x : R.Fail("Query value {Name} is missing or invalid.", name);
+    req.Query.TryGetValue(name, out var v) && T.TryParse(v[0], CultureInfo.InvariantCulture, out var x)
+        ? x : R.Fail("Query value {Name} is missing or invalid.", name).Knd(FailureKind.Invalid);
 
-public static Result<Maybe<T>> OptionalQuery<T>(this Req req, string name) where T : IParsable<T> => ...;
+public static Maybe<T> QueryOrNone<T>(this Req req, string name) where T : IParsable<T> => ...;
 ```
 
-**JSON bodies** go through `JsonTypeInfo<T>`. Resolving by type from `req.Json` is AOT-safe because it only searches registered resolvers; a missing registration surfaces as a Failure at runtime, so keep the explicit overload too.
+**JSON bodies** have one path: the type is looked up in `req.JsonOptions` (`App.Json`), so `req.Json<T>()`, `req.Form<T>()` and `Reply.Json(value)` all read and write a type the same way. There is no `JsonTypeInfo<T>` overload: an `info` taken straight from an app context carries that context's plain defaults, not `App.Json`'s. Looking a type up is AOT-safe because it only searches registered resolvers; a missing registration surfaces as an `Unexpected` Failure (a logged 500) at runtime. Bad input is `Invalid` (400). `R.TryAsync` rather than catching `JsonException` alone means a cancelled read becomes a `Cancelled` Failure.
 
 ```csharp
-public static async Task<Result<T>> Json<T>(this Req req, JsonTypeInfo<T> info)
+public static Task<Result<T>> Json<T>(this Req req)
 {
-    if (!req.Http.Request.HasJsonContentType()) return R.Fail("Request body is not JSON.");
-    try
-    {
-        var value = await JsonSerializer.DeserializeAsync(req.Http.Request.Body, info, req.Cancellation);
-        return value is null ? R.Fail("Request body is empty.") : R.Wrap(value);
-    }
-    catch (JsonException e) { return R.Fail("Invalid JSON at {Path}.", e.Path); }
+    if (!req.Http.Request.HasJsonContentType()) return R.Fail("Request body is not JSON.").Knd(FailureKind.Invalid);
+    // info = (JsonTypeInfo<T>)req.JsonOptions.GetTypeInfo(typeof(T)); NotSupportedException ->
+    //     "Type {Type} is not registered for JSON." (Unexpected)
+    // deserialise with info inside R.TryAsync:
+    //     null (empty body or `null`) -> "Request body is empty." (Invalid)
+    //     JsonException -> "Request body is not valid JSON at {Path}." (Invalid)
 }
-
-public static Task<Result<T>> Json<T>(this Req req) =>
-    /* (JsonTypeInfo<T>)req.Json.GetTypeInfo(typeof(T)); NotSupportedException -> Failure */ ...;
 ```
 
-**Forms** are mapped onto JSON, shaped by the type's own metadata (`info.Properties`), then deserialised with the same `JsonTypeInfo<T>`. Naming policy, `[JsonPropertyName]`, init-only properties and constructors all behave as for JSON.
+**Forms** are mapped onto JSON, shaped by the type's own metadata (`info.Properties`, with `info` from `req.JsonOptions`), then deserialised with the same `JsonTypeInfo<T>`. Naming policy, `[JsonPropertyName]`, init-only properties and constructors all behave as for JSON, and a field that is left out keeps the property's default.
 
 ```csharp
-public static async Task<Result<T>> Form<T>(this Req req, JsonTypeInfo<T> info)
+public static async Task<Result<T>> Form<T>(this Req req)
 {
-    if (!req.Http.Request.HasFormContentType) return R.Fail("Request body is not a form.");
+    if (!req.Http.Request.HasFormContentType) return R.Fail("Request body is not a form.").Knd(FailureKind.Invalid);
+    var info = /* looked up in req.JsonOptions, as for JSON */;
     var form = await req.Http.Request.ReadFormAsync(req.Cancellation);
 
     var buffer = new ArrayBufferWriter<byte>();
@@ -406,11 +413,13 @@ public static async Task<Result<T>> Form<T>(this Req req, JsonTypeInfo<T> info)
         }
         w.WriteEndObject();
     }
-    // deserialise buffer.WrittenSpan with info; JsonException -> Failure
+    // deserialise buffer.WrittenSpan with info; JsonException -> "Form field {Name} is not valid." (Invalid),
+    // with the name from the JSON path ($.views -> views)
 }
 
-// bool: "on"/"true"/"1" -> true (checkbox); Enumerable kind -> array of strings;
-// anything else -> a JSON string (numbers read via AllowReadingFromString). Never WriteRawValue user input.
+// bool, ignoring case: "on"/"true"/"1" -> true, "off"/"false"/"0" -> false, anything else Invalid (checkbox);
+// Enumerable kind -> array of strings; anything else -> a JSON string (numbers read via AllowReadingFromString).
+// Never WriteRawValue user input.
 ```
 
 **A handler, end to end**
@@ -418,9 +427,9 @@ public static async Task<Result<T>> Form<T>(this Req req, JsonTypeInfo<T> info)
 ```csharp
 static Task<Result<Reply>> UpdatePost(Req req) =>
     from id   in req.Route<PostId>("id")
-    from body in req.Json(AppJson.Default.PostDto)
+    from body in req.Json<PostDto>()
     from post in Posts.Update(id, body, req.Cancellation)
-    from reply in Reply.Json(post, AppJson.Default.Post)
+    from reply in Reply.Json(post)
     select reply;
 ```
 
@@ -444,22 +453,22 @@ Static files come from Kestrel's middleware or from Caddy, not from Merlin. A ha
 
 ## Open questions and decisions
 
-The biggest open decision is how a `Failure` tells the adapter "client's fault (400)" from "server's fault (500)". Binders hit it first.
+Questions that came up while writing the tests, and the decisions settled then, are in `decisions.md`.
 
-- [ ] **Failure kinds.** Add an optional kind or status slot to Wrap v2's `Failure` while it's in beta, or wrap it on Merlin's side (e.g. an `HttpFailure` carrying a status)? Typed routes move route values out of this question; query, JSON and form binders still raise it.
-- [ ] **Error body format.** Plain text, or RFC 9457 problem details (`application/problem+json`)? Does a 400 include the binder's message?
+- [x] **Failure kinds.** Wrap 2.0.0-beta.5's `Failure` has a `FailureKind`, and `Reply.Error` maps it to a status (see Failures and logging).
+- [x] **Error body format.** RFC 9457 problem details (`application/problem+json`). A 4xx includes the failure's message as `detail`; a 5xx doesn't.
 - [ ] **Overlapping param types.** `42` parses as `int`, `long` and `string`. Reject overlapping numeric types at one node (suggested), or allow them with priority winning? Anything alongside `string` is allowed, as the deliberate fallback.
 - [ ] **Default param types.** Is `int`, `long`, `guid`, `bool`, `dateonly`, `string` the right built-in set? Add `decimal`, `double`, `datetime`?
 - [ ] **Compile-time typed handlers.** Handler and template agree only at runtime. A typed `Map`, e.g. `.Get<int>((req, id, ct) => …)`, would let the compiler check it, at the cost of more API. Revisit once the basics work.
-- [ ] **Handler signature (decided).** The separate `CancellationToken` parameter is dropped: handlers take only `Req`, and use `req.Cancellation`.
+- [x] **Handler signature.** The separate `CancellationToken` parameter is dropped: handlers take only `Req`, and use `req.Cancellation`.
 - [ ] **`Req.Http` visibility.** Public escape hatch for now; make it internal once header, cookie and claim binders exist?
-- [ ] **Trailing slashes.** Is `/posts/` the same as `/posts`, a redirect, or a 404?
-- [ ] **Catch-all with zero segments.** Does `/files/{path:*}` match `/files`, with `path` empty? Currently no: the tests expect at least one segment.
+- [x] **Trailing slashes.** `/posts/` is the same as `/posts` (settled 2026-11-26).
+- [x] **Catch-all with zero segments.** Does `/files/{path:*}` match `/files`, with `path` empty? No: a catch-all needs at least one segment, and `/{path:*}` does not match `/` (settled 2026-11-26, see `decisions.md`).
 - [ ] **Route name scope.** Names unique per router, or per template plus method?
 - [ ] **Registration errors.** Throw (current choice), or collect them and fail `StartAsync` with a list?
 - [ ] **Optional parameters.** Support `{id:int?}`, or require two `Map` calls?
 - [ ] **Form nesting.** Support `Address.Street`-style names, or flat DTOs only for now?
-- [ ] **Unhandled exceptions.** Catch at the adapter and turn them into a logged 500 Failure, or leave them to ASP.NET?
+- [ ] **Unhandled exceptions.** Catch at the adapter and turn them into a logged 500 Failure, or leave them to ASP.NET? Today Kestrel logs them and sends a 500 with no body.
 
 ## Build order and test plan
 
@@ -473,12 +482,12 @@ Build from the inside out: pure pieces first, so each can be tested without a se
 | 4 | `ParamType` + `ParamTypes` | Each built-in type parses valid and rejects invalid input; invariant culture; custom `Add<T>`; duplicate names throw; unknown type throws |
 | 5 | `Template.Parse` | Literals, typed and untyped params, catch-all; every invalid template throws |
 | 6 | `Node` + `Router.Add` | Tries built per method; params sorted by priority; each duplicate/conflict case throws; `Lock` blocks `Map` |
-| 7 | `Router.Match` | Literal beats param; typed beats `string`; failed parse falls through or 404s; backtracking; typed captures; decoding; 404 vs 405 + `Allow`; `HEAD` falls back to `GET` |
+| 7 | `Router.Match` | Literal beats param; typed beats `string`; failed parse falls through or 404s; backtracking; typed captures; no second decoding; empty and trailing segments; 404 vs 405 + `Allow`; `HEAD` falls back to `GET` |
 | 8 | `Req` + route/query binders | Route type match and mismatch; query `IParsable` success/failure; `Maybe` for optional |
 | 9 | JSON binder | Wrong content type, empty body, invalid JSON, unregistered type, success |
 | 10 | Form binder | Strings, numbers from strings, checkbox on/absent, multi-select arrays, bad value |
-| 11 | Adapter: `Execute` with Failure mapping | Failure → logged + error reply; nothing written after `HasStarted`; exceptions become 500 |
-| 12 | End to end | In-memory requests through the whole pipeline via `TestServer` or a real port |
+| 11 | Adapter, with Failure mapping | Through `StartAsync` on Kestrel at a free loopback port (`App_Tests.TestHost`): replies written with `App.Json`; 404 / 405; `HEAD` without a body; Failure → logged + error reply by kind; nothing written after `HasStarted`; cancellation not logged as an error |
+| 12 | End to end | Covered by step 11's tests, which run the whole pipeline on a real port |
 
 **Testing approach**
 
