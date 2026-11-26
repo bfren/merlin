@@ -16,18 +16,19 @@ internal sealed class Node
 	/// Literal children, keyed by segment text (case-insensitive).
 	/// </summary>
 	public Dictionary<string, Node> Literals { get; } =
-		new(StringComparer.OrdinalIgnoreCase);
+		[with(StringComparer.OrdinalIgnoreCase)];
 
 	/// <summary>
 	/// Parameter children, sorted by <see cref="ParamType.Priority"/> so lower values are tried first.
+	/// In case of a tie, the order in which params are added is used.
 	/// </summary>
-	public List<(string Name, ParamType Type, Node Node)> Params { get; } =
+	public List<NodeParam> Params { get; } =
 		[];
 
 	/// <summary>
 	/// Catch-all route at this point, which captures the rest of the path.
 	/// </summary>
-	public (string Name, Handler Handler)? CatchAll { get; set; }
+	public NodeCatchAll? CatchAll { get; set; }
 
 	/// <summary>
 	/// Handler of a route that ends at this node.

@@ -120,18 +120,24 @@ public sealed class Router
 	/// <exception cref="InvalidOperationException">A parameter of the same type but a different name already exists here.</exception>
 	private static Node ParamChild(Node node, Param p, string source)
 	{
+		// if a Node exists of this type and with this name, return it
 		var existing = node.Params.FindIndex(x => x.Type.Name == p.Type.Name);
 		if (existing >= 0)
 		{
-			var (name, _, child) = node.Params[existing];
+			var (name, _, _, child) = node.Params[existing];
 			return name == p.Name
 				? child
 				: throw new InvalidOperationException($"'{source}': {{{p.Name}}} conflicts with {{{name}}}.");
 		}
 
+		// create a new Node, sorted by ParamType Priority,
+		// or the order in which Nodes to solve a tie
 		var created = new Node();
-		node.Params.Add((p.Name, p.Type, created));
-		node.Params.Sort((a, b) => a.Type.Priority.CompareTo(b.Type.Priority));
+		node.Params.Add(new(p.Name, p.Type, node.Params.Count, created));
+		node.Params.Sort((a, b) => a.Type.Priority == b.Type.Priority
+			? a.Order.CompareTo(b.Order)
+			: a.Type.Priority.CompareTo(b.Type.Priority)
+		);
 		return created;
 	}
 
@@ -151,7 +157,7 @@ public sealed class Router
 			throw new InvalidOperationException($"'{source}': catch-all already mapped here.");
 		}
 
-		node.CatchAll = (c.Name, handler);
+		node.CatchAll = new(c.Name, handler);
 		return node;
 	}
 

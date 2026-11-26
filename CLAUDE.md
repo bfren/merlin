@@ -21,7 +21,7 @@ The full design, with code shapes and open decisions, is in `docs/design-notes.m
 ## Layout
 
 - `src/Merlin/App.cs`: builds a slim `WebApplication`, locks the router, matches each request and runs its handler.
-- `src/Merlin/Routing/`: `Router` (one trie per HTTP method, keyed in `tries`), `Node` (a point in a trie), `Template` + `Segment` (`Literal`, `Param`, `CatchAll`; a `closed` hierarchy), `ParamType`/`ParamTypes` (typed params via `IParsable<T>`), `RouteBuilder` (fluent `Map(...).Get(...).Post(...)`), `RouteMatch` (`Matched`, `MethodNotAllowed`, `NotFound`; a `closed` hierarchy).
+- `src/Merlin/Routing/`: `Router` (one trie per HTTP method, keyed in `tries`), `Node` (a point in a trie, with `NodeParam` and `NodeCatchAll` children), `Template` + `Segment` (`Literal`, `Param`, `CatchAll`; a `closed` hierarchy), `ParamType`/`ParamTypes` (typed params via `IParsable<T>`), `RouteBuilder` (fluent `Map(...).Get(...).Post(...)`), `RouteMatch` (`Matched`, `MethodNotAllowed`, `NotFound`; a `closed` hierarchy).
 - `src/Merlin/Replies/`: `Reply` (status, headers, `WriteAsync`), `TextReply`, `JsonReply<T>`. Static helpers on `Reply` all return `Result<Reply>` for consistency.
 - `src/Merlin/Extensions/`: partial static extension classes, one method per file in a folder, e.g. `ReqExtensions/ReqExtensions.Route.cs`.
 - `src/Merlin/Req.cs`: what a handler sees (HTTP context, typed route values, JSON options, cancellation).
@@ -31,7 +31,7 @@ The full design, with code shapes and open decisions, is in `docs/design-notes.m
 ## Settled decisions
 
 - Route templates: `/posts/{id:int}` (typed), `/posts/{slug}` (untyped = `string`), `/files/{path:*}` (catch-all, last segment only). `*` is a reserved param type name.
-- Matching: literal, then typed params by priority (lower first), then `string`, then catch-all, with backtracking; registration order never matters. A value that doesn't parse means no match (404), not a 400. Literals and methods are case-insensitive; values are URL-decoded.
+- Matching: literal, then typed params by priority (lower first), then `string`, then catch-all, with backtracking. Registration order never matters, except to break a tie between sibling params whose types have the same priority: the param added first is tried first (`NodeParam.Order`). A value that doesn't parse means no match (404), not a 400. Literals and methods are case-insensitive; values are URL-decoded.
 - Registration errors (bad template, duplicate route or name, sibling param conflict, `Map` after start) throw at startup.
 - Not found and method not allowed are replies from the router, not Failures. Failures are logged (`ILogger.Log(Failure)`) and become error replies.
 - Handlers: one argument (`Req`); cancellation is `req.Cancellation`. `RouteBuilder` has sync overloads (`Func<Req, Result<Reply>>`) wrapped in `Task.FromResult`.
