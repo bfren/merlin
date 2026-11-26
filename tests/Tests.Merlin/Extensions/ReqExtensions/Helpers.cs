@@ -24,9 +24,9 @@ internal static class Helpers
 	/// Build a request with a body, its content type (null for none) and JSON options
 	/// (by default resolving types from <see cref="BinderJson"/>).
 	/// </summary>
-	public static Req NewReq(string? contentType, string body, JsonSerializerOptions? options = null)
+	public static Req NewReq(string? contentType, string body, JsonSerializerOptions? options = null, bool cancelled = false)
 	{
-		var http = new DefaultHttpContext();
+		var http = new DefaultHttpContext { RequestAborted = new CancellationToken(cancelled) };
 		http.Request.ContentType = contentType;
 		var bytes = System.Text.Encoding.UTF8.GetBytes(body);
 		http.Request.Body = new MemoryStream(bytes);

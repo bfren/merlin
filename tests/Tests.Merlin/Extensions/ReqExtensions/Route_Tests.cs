@@ -125,5 +125,32 @@ public class Route_Tests
 			// Assert
 			Assert.Equal(ContextOf("Route"), result.AssertFailure().Context);
 		}
+
+		[Fact]
+		public void Missing_Value_Has_Kind_Unexpected()
+		{
+			// Arrange
+			var req = NewReq();
+
+			// Act
+			var result = req.Route<int>(Rnd.Str);
+
+			// Assert
+			// the handler and its route template disagree: a programming error, not the client's fault
+			Assert.Equal(Wrap.FailureKind.Unexpected, result.AssertFailure().Kind);
+		}
+
+		[Fact]
+		public void Wrong_Type_Has_Kind_Unexpected()
+		{
+			// Arrange
+			var req = NewReq(ImmutableDictionary<string, object>.Empty.Add("id", Rnd.Int));
+
+			// Act
+			var result = req.Route<long>("id");
+
+			// Assert
+			Assert.Equal(Wrap.FailureKind.Unexpected, result.AssertFailure().Kind);
+		}
 	}
 }

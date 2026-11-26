@@ -66,7 +66,7 @@ public class QueryOrNone_Tests
 	[Theory]
 	[InlineData("?page=abc")]
 	[InlineData("?page=")]
-	[InlineData("?page=1&page=2")]
+	[InlineData("?page=abc&page=1")]
 	public void Returns_None_When_Value_Cannot_Be_Parsed(string query)
 	{
 		// Arrange
@@ -77,5 +77,18 @@ public class QueryOrNone_Tests
 
 		// Assert
 		result.AssertNone();
+	}
+
+	[Fact]
+	public void Repeated_Key_Uses_First_Value()
+	{
+		// Arrange
+		var req = NewReq(query: "?page=1&page=2");
+
+		// Act
+		var result = req.QueryOrNone<int>("page");
+
+		// Assert
+		Assert.Equal(1, result.AssertSome());
 	}
 }

@@ -82,13 +82,27 @@ public class Json_Tests
 		}
 	}
 
+	private const string NotJson = "Request body is not JSON.";
+
+	private const string Empty = "Request body is empty.";
+
+	private const string InvalidJson = "Request body is not valid JSON at {Path}.";
+
+	private const string Unregistered = "Type {Type} is not registered for JSON.";
+
+	private static void AssertFailure<T>(Wrap.Result<T> result, Wrap.FailureKind kind, string message, params object[] args)
+	{
+		var failure = result.AssertFailure(message, args);
+		Assert.Equal(kind, failure.Kind);
+	}
+
 	public class Failures
 	{
 		[Theory]
 		[InlineData("text/plain")]
 		[InlineData("application/x-www-form-urlencoded")]
 		[InlineData(null)]
-		public async Task Wrong_Content_Type_Returns_Failure(string? contentType)
+		public async Task Wrong_Content_Type_Is_Invalid(string? contentType)
 		{
 			// Arrange
 			var req = NewReq(contentType, """{"title":"x"}""");
@@ -97,13 +111,13 @@ public class Json_Tests
 			var result = await req.Json(BinderJson.Default.PostDto);
 
 			// Assert
-			result.AssertFailure();
+			AssertFailure(result, Wrap.FailureKind.Invalid, NotJson);
 		}
 
 		[Theory]
 		[InlineData("")]
 		[InlineData("null")]
-		public async Task Empty_Body_Returns_Failure(string body)
+		public async Task Empty_Body_Is_Invalid(string body)
 		{
 			// Arrange
 			var req = NewReq(Json, body);
@@ -112,14 +126,32 @@ public class Json_Tests
 			var result = await req.Json(BinderJson.Default.PostDto);
 
 			// Assert
-			result.AssertFailure();
+			AssertFailure(result, Wrap.FailureKind.Invalid, Empty);
+		}
+
+		// paths checked against System.Text.Json on 2026-11-26
+		[Theory]
+		[InlineData("{", "$")]
+		[InlineData("not json", "$")]
+		[InlineData("""{"title":}""", "$.title")]
+		public async Task Invalid_Json_Is_Invalid_With_Path(string body, string path)
+		{
+			// Arrange
+			var req = NewReq(Json, body);
+
+			// Act
+			var result = await req.Json(BinderJson.Default.PostDto);
+
+			// Assert
+			AssertFailure(result, Wrap.FailureKind.Invalid, InvalidJson, path);
 		}
 
 		[Theory]
-		[InlineData("{")]
-		[InlineData("not json")]
-		[InlineData("""{"title":}""")]
-		public async Task Invalid_Json_Returns_Failure(string body)
+		[InlineData("""{"views":"abc"}""", "$.views")]
+		[InlineData("""{"views":"3"}""", "$.views")]
+		[InlineData("""{"draft":"yes"}""", "$.draft")]
+		[InlineData("""[1,2]""", "$")]
+		public async Task Wrong_Shape_Is_Invalid_With_Path(string body, string path)
 		{
 			// Arrange
 			var req = NewReq(Json, body);
@@ -128,24 +160,20 @@ public class Json_Tests
 			var result = await req.Json(BinderJson.Default.PostDto);
 
 			// Assert
-			result.AssertFailure();
+			AssertFailure(result, Wrap.FailureKind.Invalid, InvalidJson, path);
 		}
 
-		[Theory]
-		[InlineData("""{"views":"abc"}""")]
-		[InlineData("""{"views":"3"}""")]
-		[InlineData("""{"draft":"yes"}""")]
-		[InlineData("""[1,2]""")]
-		public async Task Wrong_Shape_Returns_Failure(string body)
+		[Fact]
+		public async Task Cancelled_Read_Has_Kind_Cancelled()
 		{
 			// Arrange
-			var req = NewReq(Json, body);
+			var req = NewReq(Json, """{"title":"x"}""", cancelled: true);
 
 			// Act
 			var result = await req.Json(BinderJson.Default.PostDto);
 
 			// Assert
-			result.AssertFailure();
+			Assert.Equal(Wrap.FailureKind.Cancelled, result.AssertFailure().Kind);
 		}
 	}
 
@@ -184,7 +212,7 @@ public class Json_Tests
 		}
 
 		[Fact]
-		public async Task Unregistered_Type_Returns_Failure()
+		public async Task Unregistered_Type_Is_Unexpected()
 		{
 			// Arrange
 			var req = NewReq(Json, """{"value":"x"}""");
@@ -193,11 +221,12 @@ public class Json_Tests
 			var result = await req.Json<Unregistered>();
 
 			// Assert
-			result.AssertFailure();
+			// the type was never registered: the server's fault, not the client's
+			AssertFailure(result, Wrap.FailureKind.Unexpected, Json_Tests.Unregistered, nameof(ReqExtensions_Tests.Unregistered));
 		}
 
 		[Fact]
-		public async Task Wrong_Content_Type_Returns_Failure()
+		public async Task Wrong_Content_Type_Is_Invalid()
 		{
 			// Arrange
 			var req = NewReq("text/plain", """{"title":"x"}""");
@@ -206,11 +235,11 @@ public class Json_Tests
 			var result = await req.Json<PostDto>();
 
 			// Assert
-			result.AssertFailure();
+			AssertFailure(result, Wrap.FailureKind.Invalid, NotJson);
 		}
 
 		[Fact]
-		public async Task Invalid_Json_Returns_Failure()
+		public async Task Invalid_Json_Is_Invalid_With_Path()
 		{
 			// Arrange
 			var req = NewReq(Json, "{");
@@ -219,7 +248,20 @@ public class Json_Tests
 			var result = await req.Json<PostDto>();
 
 			// Assert
-			result.AssertFailure();
+			AssertFailure(result, Wrap.FailureKind.Invalid, InvalidJson, "$");
+		}
+
+		[Fact]
+		public async Task Cancelled_Read_Has_Kind_Cancelled()
+		{
+			// Arrange
+			var req = NewReq(Json, """{"title":"x"}""", cancelled: true);
+
+			// Act
+			var result = await req.Json<PostDto>();
+
+			// Assert
+			Assert.Equal(Wrap.FailureKind.Cancelled, result.AssertFailure().Kind);
 		}
 	}
 }

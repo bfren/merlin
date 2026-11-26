@@ -10,8 +10,18 @@ public class Form_Tests
 {
 	private const string Form = "application/x-www-form-urlencoded";
 
+	private const string NotForm = "Request body is not a form.";
+
+	private const string InvalidField = "Form field {Name} is not valid.";
+
 	private static Task<Wrap.Result<PostDto>> Bind(string body) =>
 		NewReq(Form, body).Form(BinderJson.Default.PostDto);
+
+	private static void AssertFailure<T>(Wrap.Result<T> result, Wrap.FailureKind kind, string message, params object[] args)
+	{
+		var failure = result.AssertFailure(message, args);
+		Assert.Equal(kind, failure.Kind);
+	}
 
 	public class Strings
 	{
@@ -118,7 +128,7 @@ public class Form_Tests
 		[InlineData("abc")]
 		[InlineData("1.5")]
 		[InlineData("1,\"draft\":true")]
-		public async Task Invalid_Number_Returns_Failure(string views)
+		public async Task Invalid_Number_Is_Invalid_Field(string views)
 		{
 			// Arrange
 
@@ -126,7 +136,7 @@ public class Form_Tests
 			var result = await Bind($"views={Uri.EscapeDataString(views)}");
 
 			// Assert
-			result.AssertFailure();
+			AssertFailure(result, Wrap.FailureKind.Invalid, InvalidField, "views");
 		}
 	}
 
@@ -136,6 +146,8 @@ public class Form_Tests
 		[InlineData("on")]
 		[InlineData("true")]
 		[InlineData("1")]
+		[InlineData("ON")]
+		[InlineData("True")]
 		public async Task Checked_Is_True(string value)
 		{
 			// Arrange
@@ -157,6 +169,39 @@ public class Form_Tests
 
 			// Assert
 			Assert.False(result.AssertOk().Draft);
+		}
+
+		[Theory]
+		[InlineData("off")]
+		[InlineData("false")]
+		[InlineData("0")]
+		[InlineData("OFF")]
+		[InlineData("False")]
+		public async Task Unchecked_Is_False(string value)
+		{
+			// Arrange
+
+			// Act
+			var result = await Bind($"draft={value}");
+
+			// Assert
+			Assert.False(result.AssertOk().Draft);
+		}
+
+		[Theory]
+		[InlineData("yes")]
+		[InlineData("2")]
+		[InlineData("")]
+		public async Task Other_Value_Is_Invalid_Field(string value)
+		{
+			// Arrange
+
+			// Act
+			var result = await Bind($"draft={value}");
+
+			// Assert
+			// anything else fails rather than quietly becoming false
+			AssertFailure(result, Wrap.FailureKind.Invalid, InvalidField, "draft");
 		}
 	}
 
@@ -184,6 +229,19 @@ public class Form_Tests
 
 			// Assert
 			Assert.Equal(["a"], result.AssertOk().Tags ?? []);
+		}
+
+		[Fact]
+		public async Task Absent_Is_Default()
+		{
+			// Arrange
+
+			// Act
+			var result = await Bind("title=x");
+
+			// Assert
+			// as in JSON: PostDto sets no default for Tags, so it stays null
+			Assert.Null(result.AssertOk().Tags);
 		}
 	}
 
@@ -250,7 +308,7 @@ public class Form_Tests
 		[InlineData("application/json")]
 		[InlineData("text/plain")]
 		[InlineData(null)]
-		public async Task Wrong_Content_Type_Returns_Failure(string? contentType)
+		public async Task Wrong_Content_Type_Is_Invalid(string? contentType)
 		{
 			// Arrange
 			var req = NewReq(contentType, "title=x");
@@ -259,7 +317,20 @@ public class Form_Tests
 			var result = await req.Form(BinderJson.Default.PostDto);
 
 			// Assert
-			result.AssertFailure();
+			AssertFailure(result, Wrap.FailureKind.Invalid, NotForm);
+		}
+
+		[Fact]
+		public async Task Cancelled_Read_Has_Kind_Cancelled()
+		{
+			// Arrange
+			var req = NewReq(Form, "title=x", cancelled: true);
+
+			// Act
+			var result = await req.Form(BinderJson.Default.PostDto);
+
+			// Assert
+			Assert.Equal(Wrap.FailureKind.Cancelled, result.AssertFailure().Kind);
 		}
 	}
 }

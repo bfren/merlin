@@ -112,6 +112,21 @@ public class Query_Tests
 		}
 
 		[Fact]
+		public void Repeated_Key_Uses_First_Value()
+		{
+			// Arrange
+			var req = NewReq(query: "?page=1&page=2&tag=a&tag=b");
+
+			// Act
+			var page = req.Query<int>("page");
+			var tag = req.Query<string>("tag");
+
+			// Assert
+			page.AssertOk(1);
+			tag.AssertOk("a");
+		}
+
+		[Fact]
 		public void Empty_Value_Is_Empty_String()
 		{
 			// Arrange
@@ -171,19 +186,6 @@ public class Query_Tests
 		}
 
 		[Fact]
-		public void Repeated_Key_Returns_Failure_For_Int()
-		{
-			// Arrange
-			var req = NewReq(query: "?page=1&page=2");
-
-			// Act
-			var result = req.Query<int>("page");
-
-			// Assert
-			result.AssertFailure(Message, "page", nameof(Int32));
-		}
-
-		[Fact]
 		public void Failure_Has_Context()
 		{
 			// Arrange
@@ -194,6 +196,21 @@ public class Query_Tests
 
 			// Assert
 			Assert.Equal(ContextOf("Query"), result.AssertFailure().Context);
+		}
+
+		[Theory]
+		[InlineData("")]
+		[InlineData("?page=abc")]
+		public void Failure_Has_Kind_Invalid(string query)
+		{
+			// Arrange
+			var req = NewReq(query: query);
+
+			// Act
+			var result = req.Query<int>("page");
+
+			// Assert
+			Assert.Equal(Wrap.FailureKind.Invalid, result.AssertFailure().Kind);
 		}
 	}
 }

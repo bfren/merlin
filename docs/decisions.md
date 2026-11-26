@@ -61,13 +61,13 @@ Checked on 2026-11-26: when a source-generated context is used as the resolver f
 | --- | --- | --- |
 | `WriteBodyAsync` is shared by every reply, but only `JsonReply` needs the JSON options | Pass the options to every reply and let the others ignore them (an unused parameter on an override is normal). If a second need appears (e.g. a `FileReply` wanting a file provider), replace the parameter with a small record such as `WriteContext(JsonSerializerOptions Json, ...)` | none yet |
 
-## Open: binders
+## Binders (settled 2026-11-26)
 
-| Question | What the tests assume now | Tests |
-| --- | --- | --- |
-| Repeated query key, e.g. `?tag=a&tag=b` | `Query<int>` fails and `QueryOrNone<int>` gives None. `Query<string>` returns `"a,b"` (from `ToString()` on all the values); not tested, as it may not be wanted | `Query_Tests.Failures.Repeated_Key_Returns_Failure_For_Int`, `QueryOrNone_Tests` |
-| Numbers in forms: does `Form` read numbers from strings itself, or rely on the options? | Answered by the one-path JSON decision: `Form` resolves through `App.Json`, which reads numbers from strings. The test context (`BinderJson`) does not, so `Binds_Number_From_String` must pass `App.Json`-like options once `Form` drops its `info` | `Form_Tests.Numbers.Binds_Number_From_String` |
-| Failure messages for `Json` and `Form` (e.g. "Request body is not JSON.", "Request body is empty.", "Invalid JSON at {Path}.", "Request body is not a form.") | Only checked as a Failure; exact text and the JSON path to be asserted once fixed | `Json_Tests`, `Form_Tests` |
-| Form: an array field that is left out | Not tested (`null` or an empty array?) | none |
-| Form: checkbox values other than `on`, `true` and `1` (e.g. `off`, `false`, `0`) | Not tested; only those three are expected to be true | `Form_Tests.Checkboxes` |
-| Cancellation while reading a JSON or form body | Not tested | none |
+- **Binder failures have a `FailureKind`.** Bad client input is `Invalid` (400): a query value that is missing or doesn't parse, the wrong content type, an empty body, invalid JSON, or a form field that can't be converted. `Invalid` is used for the wrong content type too, rather than 415, because Wrap has no kind for it and custom kinds map to 500. A `Route<T>` failure means the handler and its template disagree, which is a programming error, so it is `Unexpected` (500); so is an unregistered type in `Json<T>()`. Tests: `Route_Tests`, `Query_Tests`, `Json_Tests`, `Form_Tests` (`*_Has_Kind_*`).
+- **Failure messages.** `Query` and `Route` keep their messages. `Json`: "Request body is not JSON.", "Request body is empty." (also for a body of `null`), "Request body is not valid JSON at {Path}." and "Type {Type} is not registered for JSON." `Form`: "Request body is not a form." and "Form field {Name} is not valid.", where the name comes from the JSON path (`$.views` gives `views`). Tests: `Json_Tests`, `Form_Tests`.
+- **A repeated query key uses the first value**, as ASP.NET's own binding does: `?page=1&page=2` gives 1, and `?tag=a&tag=b` gives `"a"` for `Query<string>`. A `QueryAll<T>` returning every value can come later. Tests: `Query_Tests.Valid.Repeated_Key_Uses_First_Value`, `QueryOrNone_Tests.Repeated_Key_Uses_First_Value`.
+- **A form field that is left out keeps the property's default**, as in JSON: `null` for an array unless the type sets one (e.g. `= []`), `false` for a checkbox. Tests: `Form_Tests.Arrays.Absent_Is_Default`, `Checkboxes.Absent_Is_False`.
+- **Checkboxes:** `on`, `true` and `1` are true; `off`, `false` and `0` are false; case is ignored. Anything else is an `Invalid` failure rather than false. Tests: `Form_Tests.Checkboxes`.
+- **Numbers in forms come from `App.Json`**, which reads numbers from strings (part of the one-path JSON decision). `Form_Tests.Numbers.Binds_Number_From_String` passes `App.Json`-like options once `Form` drops its `info`.
+- **Cancellation while reading a body becomes a `Cancelled` Failure.** The binders use `R.TryAsync` rather than catching only `JsonException`, so Wrap gives the Failure the kind `Cancelled` and the adapter's cancellation rule applies (no error log, no reply). Tests: `Json_Tests.Failures.Cancelled_Read_Has_Kind_Cancelled`, `Form_Tests.Content_Types.Cancelled_Read_Has_Kind_Cancelled`.
+
