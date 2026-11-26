@@ -2,7 +2,6 @@
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
 using System.Text.Json;
-using System.Text.Json.Serialization.Metadata;
 using Merlin.Replies;
 
 namespace Merlin.App_Tests;
@@ -16,7 +15,7 @@ public class Json_Tests
 		var app = new App([]);
 
 		// Act
-		var result = Record.Exception(() => app.Json.GetTypeInfo(typeof(Problem)));
+		var result = Record.Exception(() => app.Json.GetTypeInfo<Problem>());
 
 		// Assert
 		Assert.Null(result);
@@ -27,7 +26,7 @@ public class Json_Tests
 	{
 		// Arrange
 		var app = new App([]);
-		var info = (JsonTypeInfo<Problem>)app.Json.GetTypeInfo(typeof(Problem));
+		var info = app.Json.GetTypeInfo<Problem>();
 
 		// Act
 		var result = JsonSerializer.Serialize(new Problem { Title = "Not Found", Status = 404 }, info);

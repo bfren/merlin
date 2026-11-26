@@ -171,7 +171,7 @@ public class Form_Tests
 			var result = await Bind("tags=a&tags=b&tags=c");
 
 			// Assert
-			Assert.Equal(["a", "b", "c"], result.AssertOk().Tags);
+			Assert.Equal(["a", "b", "c"], result.AssertOk().Tags ?? []);
 		}
 
 		[Fact]
@@ -183,7 +183,7 @@ public class Form_Tests
 			var result = await Bind("tags=a");
 
 			// Assert
-			Assert.Equal(["a"], result.AssertOk().Tags);
+			Assert.Equal(["a"], result.AssertOk().Tags ?? []);
 		}
 	}
 
@@ -218,7 +218,7 @@ public class Form_Tests
 			Assert.Equal("x", post.Title);
 			Assert.Equal(2, post.Views);
 			Assert.True(post.Draft);
-			Assert.Equal(["a"], post.Tags);
+			Assert.Equal(["a"], post.Tags ?? []);
 			Assert.Equal("y", post.AuthorName);
 		}
 	}

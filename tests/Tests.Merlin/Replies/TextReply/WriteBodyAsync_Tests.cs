@@ -31,7 +31,7 @@ public class WriteBodyAsync_Tests
 		response.Body = stream;
 
 		// Act
-		await new TextReply(content).WriteAsync(response, TestContext.Current.CancellationToken);
+		await new TextReply(content).WriteAsync(response, Json, TestContext.Current.CancellationToken);
 
 		// Assert
 		Assert.Equal(Encoding.UTF8.GetBytes(content), stream.ToArray());

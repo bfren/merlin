@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace Merlin.Replies;
 
 /// <summary>
-/// A reply that serialises a value as JSON, using source-generated metadata (AOT-safe).
+/// A reply that serialises a value as JSON, using the source-generated metadata registered with the application's JSON options (AOT-safe).
 /// </summary>
 /// <typeparam name="T">Value type.</typeparam>
 /// <param name="Content">Value to serialise.</param>

@@ -81,7 +81,7 @@ public class WriteAsync_Tests
 			var reply = new TextReply(Rnd.Str);
 
 			// Act
-			await reply.WriteAsync(response, TestContext.Current.CancellationToken);
+			await reply.WriteAsync(response, Json, TestContext.Current.CancellationToken);
 
 			// Assert
 			var server = response.Headers.Server;
@@ -115,7 +115,7 @@ public class WriteAsync_Tests
 			var reply = new TextReply(Rnd.Str);
 
 			// Act
-			var result = await reply.WriteAsync(response, TestContext.Current.CancellationToken);
+			var result = await reply.WriteAsync(response, Json, TestContext.Current.CancellationToken);
 
 			// Assert
 			result.AssertFailure();
@@ -132,7 +132,7 @@ public class WriteAsync_Tests
 			var reply = new TextReply(Rnd.Str) with { StatusCode = StatusCodes.Status202Accepted };
 
 			// Act
-			await reply.WriteAsync(response, TestContext.Current.CancellationToken);
+			await reply.WriteAsync(response, Json, TestContext.Current.CancellationToken);
 
 			// Assert
 			Assert.Equal(StatusCodes.Status202Accepted, response.StatusCode);

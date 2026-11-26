@@ -26,7 +26,7 @@ public class Headers_Tests
 		// Arrange
 
 		// Act
-		var result = new JsonReply<TestDto>(new(Rnd.Int, Rnd.Str), TestJson.Default.TestDto).Headers;
+		var result = new JsonReply<TestDto>(new(Rnd.Int, Rnd.Str)).Headers;
 
 		// Assert
 		Assert.Equal("application/json", result["Content-Type"]);

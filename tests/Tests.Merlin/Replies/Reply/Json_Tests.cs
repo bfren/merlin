@@ -8,19 +8,30 @@ namespace Merlin.Replies.Reply_Tests;
 public class Json_Tests
 {
 	[Fact]
-	public void Returns_JsonReply_With_Content_And_Info()
+	public void Returns_JsonReply_With_Content()
 	{
 		// Arrange
 		var content = new TestDto(Rnd.Int, Rnd.Str);
-		var info = TestJson.Default.TestDto;
 
 		// Act
-		var result = Reply.Json(content, info);
+		var result = Reply.Json(content);
 
 		// Assert
 		var reply = Assert.IsType<JsonReply<TestDto>>(result.AssertOk());
 		Assert.Same(content, reply.Content);
-		Assert.Same(info, reply.Info);
 		Assert.Equal(200, reply.StatusCode);
+	}
+
+	[Fact]
+	public void Does_Not_Check_Registration_When_Created()
+	{
+		// Arrange
+		var content = new UnregisteredDto(Rnd.Int);
+
+		// Act
+		var result = Reply.Json(content);
+
+		// Assert
+		Assert.IsType<JsonReply<UnregisteredDto>>(result.AssertOk());
 	}
 }

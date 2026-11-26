@@ -32,7 +32,7 @@ public class Json_Tests
 			Assert.Equal(title, post.Title);
 			Assert.Equal(views, post.Views);
 			Assert.True(post.Draft);
-			Assert.Equal(["a", "b"], post.Tags);
+			Assert.Equal(["a", "b"], post.Tags ?? []);
 			Assert.Equal(author, post.AuthorName);
 		}
 

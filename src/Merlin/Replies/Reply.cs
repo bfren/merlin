@@ -42,8 +42,12 @@ public abstract record class Reply
 	/// Write the status code, headers and body to the response.
 	/// </summary>
 	/// <param name="response">HTTP response.</param>
+	/// <param name="json">The application's JSON options, used by replies with a JSON body.</param>
 	/// <param name="cancellationToken">Cancellation token.</param>
-	/// <returns>True once the body has been written, or a failure if writing threw an exception.</returns>
+	/// <returns>
+	/// True once the body has been written, or a failure if writing threw an exception
+	/// (including a JSON body whose type is not registered with <paramref name="json"/>).
+	/// </returns>
 	public Task<Result<bool>> WriteAsync(HttpResponse response, JsonSerializerOptions json, CancellationToken cancellationToken)
 	{
 		SetHeaders(response);
@@ -71,6 +75,7 @@ public abstract record class Reply
 	/// Write the reply body to the response stream.
 	/// </summary>
 	/// <param name="stream">Response body stream.</param>
+	/// <param name="json">The application's JSON options - replies without a JSON body ignore them.</param>
 	/// <param name="cancellationToken">Cancellation token.</param>
 	/// <returns>A task that completes when the body has been written.</returns>
 	protected abstract Task WriteBodyAsync(Stream stream, JsonSerializerOptions json, CancellationToken cancellationToken);
@@ -86,11 +91,10 @@ public abstract record class Reply
 		throw new NotImplementedException();
 
 	/// <summary>
-	/// Create a JSON reply.
+	/// Create a JSON reply, serialised when it is written using the application's JSON options.
 	/// </summary>
-	/// <typeparam name="T">Value type.</typeparam>
+	/// <typeparam name="T">Value type - must be registered with one of the application's JSON resolvers.</typeparam>
 	/// <param name="content">Value to serialise.</param>
-	/// <param name="info">Source-generated type information for <typeparamref name="T"/>.</param>
 	/// <returns>A JSON reply.</returns>
 	public static Result<Reply> Json<T>(T content) =>
 		new JsonReply<T>(content);
