@@ -32,7 +32,7 @@ public sealed class App
 		new();
 
 	/// <summary>
-	/// JSON options passed to every request, combining the application's source-generated resolvers.
+	/// JSON options passed to every request, combining the application's source-generated resolvers with Merlin's own.
 	/// </summary>
 	internal JsonSerializerOptions Json { get; }
 
@@ -46,7 +46,7 @@ public sealed class App
 		Builder = WebApplication.CreateSlimBuilder(args);
 		Json = new()
 		{
-			TypeInfoResolver = JsonTypeInfoResolver.Combine([.. json]),
+			TypeInfoResolver = JsonTypeInfoResolver.Combine([.. json, MerlinJson.Default]),
 			NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString
 		};
 	}

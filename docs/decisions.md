@@ -19,6 +19,12 @@ Broader open questions are listed at the end of `design-notes.md`; where an item
 - **`Match` does not decode.** Kestrel's `Request.Path` is already decoded except `%2F` (checked against Kestrel on 2026-11-26), so `Match` matches the path as given. Decoding again would decode twice (`100%2525` would become `100%`). `%2F` stays encoded in every value, so it never splits a segment, and a catch-all can't be turned into `../../secret` by `..%2F..%2Fsecret`, which would get past Kestrel's own `..` handling. Tests: `Match_Tests.Params.Does_Not_Decode_Value`, `Encoded_Slash_Does_Not_Split_Segment`, `Catch_All.Keeps_Encoded_Slash`.
 - **HEAD.** A route with GET answers HEAD automatically, by running the GET handler (the adapter must then leave out the body). An explicit HEAD mapping wins over the fallback, so a route can answer HEAD without doing the GET work (`RouteBuilder.Head`). A route without GET or HEAD gives 405 for HEAD, and an explicit HEAD alone does not make GET allowed. `Allow` lists HEAD whenever GET or HEAD is mapped, once. Tests: `Match_Tests.Methods` (`Head_Falls_Back_To_Get`, `Head_Falls_Back_To_Get_With_Params`, `Explicit_Head_Beats_Get_Fallback`, `Head_Without_Get_Returns_MethodNotAllowed`, `Head_Does_Not_Make_Get_Allowed`, `Returns_MethodNotAllowed_With_Allowed_Methods`, `Allowed_Methods_List_Head_Once_When_Mapped_Explicitly`, `Allowed_Methods_Only_Include_Methods_Matching_Path`); `RouteBuilder/Head_Tests` (`Adds_Async_Handler_For_HEAD`, `Adds_Sync_Handler_For_HEAD`, `Does_Not_Add_Handler_For_Other_Methods` (checks nothing is added for GET), `Returns_Same_Builder`, `Sync_Overload_Returns_Same_Builder`).
 
+### Replies (settled 2026-11-26)
+
+- **`Allow` joins the methods with a comma and a space, in the order given** (`GET, HEAD, PUT`). `Router.Match` sorts the methods it returns, so the header is the same on every request; the tries are a `Dictionary`, whose order isn't guaranteed. Tests: `Reply/MethodNotAllowed_Tests`; the `Match_Tests` compare `Allowed` after sorting, so they don't check that `Match` sorts.
+- **A cancelled request is not an error.** A write to a cancelled token returns a Failure at level Error holding a `TaskCanceledException` (checked on 2026-11-26), so a client that disconnects would otherwise be logged as an error. The adapter checks `ctx.RequestAborted.IsCancellationRequested`: if it is set, the Failure is not logged as an error (Debug at most) and no error reply is written. This covers a cancelled write and a handler whose work is cancelled. Tests: none yet; they belong with the adapter tests.
+- **`Problem` fixes its own JSON format, and `MerlinJson` is part of `App.Json`.** Each member has `[JsonPropertyName]` (`title`, `status`, `type`, `detail`, `instance`), and the optional ones have `[JsonIgnore(Condition = WhenWritingNull)]`, so the RFC 9457 format is the same whatever options are used (checked on 2026-11-26 under Web defaults, no naming policy and snake_case). `MerlinJson` has no options of its own and is added to `App.Json`'s resolver (`Combine([.. json, MerlinJson.Default])`). Tests: `Reply/Problem_Tests`, `App/Json_Tests`.
+
 ## Open: routing
 
 | Question | What the tests assume now | Tests |
@@ -31,15 +37,23 @@ Broader open questions are listed at the end of `design-notes.md`; where an item
 | Question | What the tests assume now | Tests |
 | --- | --- | --- |
 | Status codes for the helpers | `NotFound` 404, `MethodNotAllowed` 405, `Error` 500 | `Reply/NotFound_Tests`, `MethodNotAllowed_Tests`, `Error_Tests` |
-| Format of the `Allow` header | `"GET, PUT"` (comma and space, in the order given) | `MethodNotAllowed_Tests` |
-| Error body format (also in design notes) | Not checked; the body must only leave out the failure's message and context | `Error_Tests.Does_Not_Write_Failure_Details` |
-| Cancellation in `Reply.WriteAsync`: should a cancelled token become a Failure (through `R.TryAsync`) or be let through? | Not tested | none |
+| Status from `FailureKind` (400 vs 500). Wrap has implemented `FailureKind`, but no published or local build has it yet (nuget.org and `N:\` stop at 2.0.0-beta.4) | `Error` always gives 500 | `Error_Tests.Returns_500` |
+| Error body format (also in design notes). RFC 9457 problem details (`application/problem+json`): the `Problem` record, the internal `MerlinJson` context and `Reply.Problem` now exist. Still open: whether 404, 405 and 500 use it, any extra members, and what `detail` may contain (waits for `FailureKind`) | `Reply.Problem` sets the status from `Problem.Status` and the problem content type; members are written with RFC 9457 names, and unset ones are left out. `Error` must leave out the failure's message and context | `Reply/Problem_Tests`, `Error_Tests.Does_Not_Write_Failure_Details` |
 
 ## Open: app adapter
 
 | Question | What the tests assume now | Tests |
 | --- | --- | --- |
 | How should tests reach the adapter? It is an inline lambda in `App.StartAsync`, and `App` keeps the built `WebApplication` private. Either pull out `internal Task Execute(HttpContext ctx, ILogger logger)` and test it with a `DefaultHttpContext`, or run end to end through `Microsoft.AspNetCore.TestHost`, which needs a workaround to reach the server and stop it | Not tested yet; waiting until the adapter writes replies | none |
+
+## Open: JSON options
+
+Checked on 2026-11-26: when a source-generated context is used as the resolver for other options (as `App.Json` does), those options apply and the context's own `[JsonSourceGenerationOptions]` are ignored. A camelCase, ignore-nulls context wrote `{"firstName":"Ben"}` through its own type info, but `{"FirstName":"Ben","Age":null}` through App-style options. So `req.Json(AppJson.Default.Post)` and `req.Json<Post>()` can read the same body differently, and `AllowReadingFromString` in `App.Json` only applies to the overload without `info`.
+
+| Question | Recommended | Tests |
+| --- | --- | --- |
+| One set of options for everything | `App.Json` holds the only options: naming policy, null handling, numbers from strings. `JsonSerializerDefaults.Web` is a good start (camelCase, case-insensitive reads, numbers from strings), plus `WhenWritingNull` if nulls should be left out. App contexts and `MerlinJson` only list types, with no `[JsonSourceGenerationOptions]` | none yet |
+| Binders and `Reply.Json` with an explicit `info` | Resolve through `App.Json` (`req.JsonOptions`), so the two overloads behave the same; the `info` passed in names the type but doesn't decide the options. `Reply.Json` would need the options passed in | `Json_Tests.Without_Info.Uses_Request_Options`; none yet compare the two overloads |
 
 ## Open: binders
 

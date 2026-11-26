@@ -111,6 +111,21 @@ public abstract record class Reply
 		throw new NotImplementedException();
 
 	/// <summary>
+	/// Create an RFC 9457 problem details reply, with the problem's status code and an <c>application/problem+json</c> content type.
+	/// </summary>
+	/// <param name="problem">Problem details.</param>
+	/// <returns>A problem details reply.</returns>
+	public static Result<Reply> Problem(Problem problem)
+	{
+		var reply = new JsonReply<Problem>(problem, MerlinJson.Default.Problem);
+		return reply with
+		{
+			Headers = reply.Headers.SetItem("Content-Type", "application/problem+json"),
+			StatusCode = problem.Status
+		};
+	}
+
+	/// <summary>
 	/// Create a plain-text reply.
 	/// </summary>
 	/// <param name="content">Text to write.</param>
