@@ -1,22 +1,26 @@
 // Merlin: .NET HTTP Server.
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
-using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Merlin.Domain;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.WebUtilities;
 using Wrap;
+using Wrap.Extensions;
 
 namespace Merlin.Replies;
 
 /// <summary>
 /// Base for all replies: holds the status code and headers, and writes them before the body.
 /// </summary>
-public abstract record class Reply
+public abstract partial record class Reply
 {
 	/// <summary>
 	/// HTTP status code (default 200 OK).
@@ -88,8 +92,18 @@ public abstract record class Reply
 	/// </summary>
 	/// <param name="failure">Failure.</param>
 	/// <returns>An error reply.</returns>
-	public static Result<Reply> Error(Failure failure) =>
-		throw new NotImplementedException();
+	public static Result<Reply> Error(Failure failure)
+	{
+		var status = Statuses.GetValueOrDefault(failure.Kind, Status.InternalServerError);
+		return Problem(new()
+		{
+			Title = ReasonPhrases.GetReasonPhrase(status.Value),
+			Status = status.Value,
+			Detail = status.Value < 500 && failure.Kind != FailureKind.Cancelled
+				? Fill(failure.Message, failure.Args)
+				: null
+		});
+	}
 
 	/// <summary>
 	/// Create a JSON reply, serialised when it is written using the application's JSON options.
@@ -105,15 +119,33 @@ public abstract record class Reply
 	/// </summary>
 	/// <param name="allowed">Methods allowed for the path.</param>
 	/// <returns>A 405 reply.</returns>
-	public static Result<Reply> MethodNotAllowed(ImmutableArray<Method> allowed) =>
-		throw new NotImplementedException();
+	public static Result<Reply> MethodNotAllowed(ImmutableArray<Method> allowed)
+	{
+		var methods = string.Join(", ", allowed.Select(m => m.Value));
+		return Problem(
+			new()
+			{
+				Title = ReasonPhrases.GetReasonPhrase(Status.MethodNotAllowed.Value),
+				Status = Status.MethodNotAllowed.Value,
+				Detail = $"Allowed methods: {methods}"
+			}
+		).Map(
+			r => r with { Headers = r.Headers.SetItem("Allow", methods) }
+		);
+	}
 
 	/// <summary>
 	/// Create a 404 Not Found reply.
 	/// </summary>
 	/// <returns>A 404 reply.</returns>
 	public static Result<Reply> NotFound() =>
-		throw new NotImplementedException();
+		Problem(
+			new()
+			{
+				Title = ReasonPhrases.GetReasonPhrase(Status.NotFound.Value),
+				Status = Status.NotFound.Value
+			}
+		);
 
 	/// <summary>
 	/// Create an RFC 9457 problem details reply, with the problem's status code and an <c>application/problem+json</c> content type.
@@ -139,4 +171,27 @@ public abstract record class Reply
 		new TextReply(content);
 
 	#endregion
+
+	private static readonly Dictionary<FailureKind, Status> Statuses = new()
+	{
+		[FailureKind.Invalid] = Status.BadRequest,
+		[FailureKind.Unauthenticated] = Status.Unauthorised,
+		[FailureKind.Forbidden] = Status.Forbidden,
+		[FailureKind.NotFound] = Status.NotFound,
+		[FailureKind.Conflict] = Status.Conflict,
+		[FailureKind.Cancelled] = Status.ClientClosedRequest,
+		[FailureKind.Unavailable] = Status.ServiceUnavailable,
+		[FailureKind.Timeout] = Status.GatewayTimeout,
+		// Unexpected, Unspecified and custom kinds fall through to 500
+	};
+
+	// Wrap messages are logging templates ("Value {Name} is not {Number}."), filled from Args in order
+	private static string Fill(string message, object?[] args)
+	{
+		var i = 0;
+		return Placeholder().Replace(message, m => i < args.Length ? $"{args[i++]}" : m.Value);
+	}
+
+	[GeneratedRegex(@"\{[^{}]+\}")] // source-generated, so AOT-safe
+	private static partial Regex Placeholder();
 }

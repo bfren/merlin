@@ -21,6 +21,7 @@ public class Error_Tests
 			[nameof(FailureKind.Forbidden)] = FailureKind.Forbidden,
 			[nameof(FailureKind.NotFound)] = FailureKind.NotFound,
 			[nameof(FailureKind.Conflict)] = FailureKind.Conflict,
+			[nameof(FailureKind.Cancelled)] = FailureKind.Cancelled,
 			[nameof(FailureKind.Unavailable)] = FailureKind.Unavailable,
 			[nameof(FailureKind.Timeout)] = FailureKind.Timeout,
 			[nameof(FailureKind.Unexpected)] = FailureKind.Unexpected,
@@ -38,6 +39,7 @@ public class Error_Tests
 				{ nameof(FailureKind.Forbidden), StatusCodes.Status403Forbidden },
 				{ nameof(FailureKind.NotFound), StatusCodes.Status404NotFound },
 				{ nameof(FailureKind.Conflict), StatusCodes.Status409Conflict },
+				{ nameof(FailureKind.Cancelled), StatusCodes.Status499ClientClosedRequest },
 				{ nameof(FailureKind.Unavailable), StatusCodes.Status503ServiceUnavailable },
 				{ nameof(FailureKind.Timeout), StatusCodes.Status504GatewayTimeout },
 				{ nameof(FailureKind.Unexpected), StatusCodes.Status500InternalServerError },
@@ -180,6 +182,22 @@ public class Error_Tests
 			var result = await ProblemAsync(failure);
 
 			// Assert
+			Assert.False(result.TryGetProperty("detail", out _));
+			Assert.DoesNotContain(message, result.GetRawText());
+		}
+
+		[Fact]
+		public async Task Cancelled_Leaves_Out_Detail()
+		{
+			// Arrange
+			var message = Rnd.Str;
+			var failure = R.Fail(message).WithKind(FailureKind.Cancelled);
+
+			// Act
+			var result = await ProblemAsync(failure);
+
+			// Assert
+			// 499 is a 4xx, but the client has gone and the message may be an exception's
 			Assert.False(result.TryGetProperty("detail", out _));
 			Assert.DoesNotContain(message, result.GetRawText());
 		}

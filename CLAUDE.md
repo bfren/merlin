@@ -14,12 +14,14 @@ The full design, with code shapes and open decisions, is in `docs/design-notes.m
 ## Stack
 
 - .NET 11 (`net11.0`), C# 15: `closed` record hierarchies, collection expression arguments (`[with(StringComparer.Ordinal)]`) and C# unions are all in use.
-- Wrap 2.0.0-beta.4 (`Result<T>`, `Maybe<T>`, `Failure`, `R.Fail`, `R.TryAsync`, async LINQ via `Wrap.Linq`). `result is Failure f` works via union pattern matching.
+- Wrap 2.0.0-rc.2 (`Result<T>`, `Maybe<T>`, `Failure`, `R.Fail`, `R.TryAsync`, async LINQ via `Wrap.Linq`). `result is Failure f` works via union pattern matching.
 - Tests: xUnit v3, NSubstitute, Rnd (`Rnd.Str`, `Rnd.Int`, ...), Microsoft.Testing.Platform runner (see `global.json`). Central package management in `Directory.Packages.props`.
-- `GenerateDocumentationFile` is on in `src`: every public and internal member needs XML docs.
+- `GenerateDocumentationFile` is on in `src` for Release builds only, so build with `-c Release` to see missing docs: every public and internal member needs XML docs.
+- Failures come from Wrap's `[Failure("…")]` source generator: `Type` args are passed through as `Type`s, the context is the generated method's name, and the kind is `Unspecified` unless the attribute sets `Kind`.
 
 ## Layout
 
+- `src/Merlin/Domain/`: generally useful types. `Method` and `Status` (Wrap `Monad`s over the method string and status code, with named values like `Method.Get` and `Status.NotFound`; not `HttpMethod`, which would clash with `System.Net.Http` from implicit usings), `Handler`, and `RouteValuesDictionary` (immutable, case-insensitive names; start from `Empty`).
 - `src/Merlin/App.cs`: builds a slim `WebApplication`, locks the router, matches each request and runs its handler.
 - `src/Merlin/Routing/`: `Router` (one trie per HTTP method, keyed in `tries`), `Node` (a point in a trie, with `NodeParam` and `NodeCatchAll` children), `Template` + `Segment` (`Literal`, `Param`, `CatchAll`; a `closed` hierarchy), `ParamType`/`ParamTypes` (typed params via `IParsable<T>`), `RouteBuilder` (fluent `Map(...).Get(...).Post(...)`), `RouteMatch` (`Matched`, `MethodNotAllowed`, `NotFound`; a `closed` hierarchy).
 - `src/Merlin/Replies/`: `Reply` (status, headers, `WriteAsync`), `TextReply`, `JsonReply<T>`. Static helpers on `Reply` all return `Result<Reply>` for consistency.
@@ -38,11 +40,11 @@ The full design, with code shapes and open decisions, is in `docs/design-notes.m
 
 ## Current state
 
-Done: templates and parsing, typed param types, registration into the tries, fluent mapping, replies (partly), logging extension, route and query binders.
+Done: templates and parsing, typed param types, registration into the tries, matching (`Router.Match`: recursive walk with backtracking, HEAD falls back to GET, sorted `Allow` methods), fluent mapping, replies (including the `Error`, `NotFound` and `MethodNotAllowed` problem replies: `FailureKind` maps to a status, `title` is the standard reason phrase), logging extension, route and query binders.
 
-Not done yet (throw `NotImplementedException`): `Router.Match`, `Reply.Error`, `Reply.MethodNotAllowed`, `Reply.NotFound`. Also not started: writing the reply in `App`, the JSON and form binders, URL generation from route names.
+Not done yet (throw `NotImplementedException`): the JSON and form binders (`req.Json<T>()`, `req.Form<T>()`). Also not started: writing the reply in `App`, URL generation from route names.
 
-Open questions are listed at the end of `docs/design-notes.md` and in `docs/decisions.md`, which also records the decisions settled while writing tests. A proposal to add `FailureKind` to Wrap's `Failure` is with the Wrap project.
+Open questions are listed at the end of `docs/design-notes.md` and in `docs/decisions.md`, which also records the decisions settled while writing tests.
 
 ## Test conventions
 
@@ -54,4 +56,4 @@ Follow the style of Ben's Wrap tests:
 - Prefer testing through the public API. Internals are visible to `Tests.Merlin` when needed.
 - File header: `// Merlin: Unit Tests` and `// Copyright (c) bfren - licensed under https://mit.bfren.dev/2022`.
 
-Tests for the unwritten code (`Router.Match`, the `Reply` helpers, the adapter in `App/StartAsync_Tests.cs`, the JSON and form binders) already exist: they build and fail with `NotImplementedException` until the code is written. Decisions that came up while writing tests, settled and open, are in `docs/decisions.md`.
+Tests for the unwritten code (the adapter in `App/StartAsync_Tests.cs`, the JSON and form binders) already exist: they build and fail until the code is written. Decisions that came up while writing tests, settled and open, are in `docs/decisions.md`.

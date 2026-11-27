@@ -152,7 +152,7 @@ public sealed record class Status : Monad<Status, int>
 	/// <summary>
 	/// <c>401 Unauthorized</c> status.
 	/// </summary>
-	public static readonly Status Unauthorized =
+	public static readonly Status Unauthorised =
 		Wrap(StatusCodes.Status401Unauthorized);
 
 	/// <summary>
