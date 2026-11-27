@@ -11,9 +11,14 @@ app.Router
 	.Map("/")
 		.Get(req => Reply.Text("Home"))
 	.Map("/hello/{name}")
-		.Get(req => from name in req.Route<string>("name")
-					from text in Reply.Text($"Hello, {name}")
-					select text)
+		.Get(req =>
+			from name in req.Route<string>("name")
+			from text in Reply.Text($"Hello, {name}!")
+			select text)
+		.Post(req =>
+			from name in req.Route<string>("name")
+			from json in Reply.Json(new { Hello = name })
+			select json)
 ;
 
 await app.StartAsync();
