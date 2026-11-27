@@ -1,6 +1,7 @@
 // Merlin: .NET HTTP Server.
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
+using System;
 using Wrap;
 
 namespace Merlin.Extensions;
@@ -24,7 +25,9 @@ public static partial class ReqExtensions
 				y,
 
 			_ =>
-				R.Fail("Route value {Name} is not a {Type}.", name, typeof(T).Name)
-					.Ctx(nameof(ReqExtensions), nameof(Route))
+				RouteValueIsIncorrectType(name, typeof(T))
 		};
+
+	[Failure("Route value {Name} is not a {Type}.")]
+	private static partial Failure RouteValueIsIncorrectType(string name, Type type);
 }

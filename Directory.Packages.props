@@ -8,9 +8,9 @@
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
     <PackageVersion Include="NSubstitute" Version="6.2.0" />
     <PackageVersion Include="NSubstitute.Analyzers.CSharp" Version="1.0.17" />
-    <PackageVersion Include="Rnd" Version="11.0.0-beta.1" />
-    <PackageVersion Include="Wrap" Version="2.0.0-beta.5" />
-    <PackageVersion Include="Wrap.Testing" Version="2.0.0-beta.5" />
+    <PackageVersion Include="Rnd" Version="11.0.0" />
+    <PackageVersion Include="Wrap" Version="2.0.0-rc.2" />
+    <PackageVersion Include="Wrap.Testing" Version="2.0.0-rc.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
     <PackageVersion Include="xunit.v3" Version="4.0.3" />
   </ItemGroup>

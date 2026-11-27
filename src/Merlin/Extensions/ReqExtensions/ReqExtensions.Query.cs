@@ -23,9 +23,11 @@ public static partial class ReqExtensions
 				y,
 
 			_ =>
-				R.Fail("Query value {Name} is missing or not a valid {Type}.", name, typeof(T).Name)
-					.Ctx(nameof(ReqExtensions), nameof(Query))
+				QueryValueMissingOrInvalidType(name, typeof(T))
 		};
+
+	[Failure("Query value {Name} is missing or not a valid {Type}.")]
+	private static partial Failure QueryValueMissingOrInvalidType(string name, Type type);
 
 	/// <summary>
 	/// Get an optional query string value, parsed as <typeparamref name="T"/>.

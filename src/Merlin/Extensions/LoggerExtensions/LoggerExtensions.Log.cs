@@ -3,6 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 using Wrap;
+using Wrap.Extensions;
 
 namespace Merlin.Extensions;
 
@@ -16,7 +17,7 @@ public static partial class LoggerExtensions
 	/// <param name="failure">Failure to log.</param>
 	public static void Log(this ILogger logger, Failure failure)
 	{
-		var level = failure.Level.ToMs();
+		var level = failure.Level.ToMsLevel();
 		if (!logger.IsEnabled(level))
 		{
 			return;
