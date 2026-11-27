@@ -17,7 +17,7 @@ internal static class Helpers
 	{
 		var http = new DefaultHttpContext();
 		http.Request.QueryString = new(query);
-		return new(http, routeValues ?? RouteValuesDictionary.Empty, new JsonSerializerOptions());
+		return new(null!, http, routeValues ?? RouteValuesDictionary.Empty, new JsonSerializerOptions());
 	}
 
 	/// <summary>
@@ -32,6 +32,7 @@ internal static class Helpers
 		http.Request.Body = new MemoryStream(bytes);
 		http.Request.ContentLength = bytes.Length;
 		return new(
+			null!,
 			http,
 			RouteValuesDictionary.Empty,
 			options ?? new JsonSerializerOptions { TypeInfoResolver = BinderJson.Default }

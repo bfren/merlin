@@ -66,13 +66,13 @@ public sealed class App
 		Router.Lock();
 
 		// add request handler middleware
-		app.Run(ctx => Adapter(ctx, app.Logger));
+		app.Run(ctx => Adapter(app, ctx));
 
 		// run app
 		return app.RunAsync();
 	}
 
-	private async Task Adapter(HttpContext ctx, ILogger logger)
+	private async Task Adapter(WebApplication app, HttpContext ctx)
 	{
 		// use Router to match request against registered routes
 		var method = Method.Wrap(ctx.Request.Method);
@@ -80,7 +80,7 @@ public sealed class App
 		var reply = Router.Match(method, path) switch
 		{
 			Matched m =>
-				await m.Handler(new(ctx, m.Values, Json)),
+				await m.Handler(new(app, ctx, m.Values, Json)),
 
 			MethodNotAllowed n =>
 				Reply.MethodNotAllowed(n.Allowed),
@@ -92,7 +92,7 @@ public sealed class App
 		// if the request failed, log and return error reply
 		if (reply is Failure f)
 		{
-			logger.Log(f);
+			app.Logger.Log(f);
 			if (!ctx.Response.HasStarted)
 			{
 				// write an error reply

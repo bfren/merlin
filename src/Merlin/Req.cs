@@ -1,10 +1,13 @@
 // Merlin: .NET HTTP Server.
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
+using System;
 using System.Text.Json;
 using System.Threading;
 using Merlin.Domain;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace Merlin;
 
@@ -12,20 +15,30 @@ namespace Merlin;
 /// What a handler can see of the current request: the route values captured by the router,
 /// the query string, and the JSON options binders use.
 /// </summary>
-/// <param name="Http">The current HTTP context - an escape hatch for anything binders don't cover yet.</param>
-/// <param name="RouteValues">Typed values captured from the path when the route matched, keyed by parameter name.</param>
-/// <param name="JsonOptions">JSON options used by the JSON and form binders.</param>
-public sealed record class Req(
-	HttpContext Http,
-	RouteValuesDictionary RouteValues,
-	JsonSerializerOptions JsonOptions
-)
+public sealed record class Req
 {
+	internal WebApplication App =>
+		field;
+
+	internal HttpContext Http =>
+		field;
+
+	/// <summary>
+	/// JSON options used by the JSON and form binders.
+	/// </summary>
+	public JsonSerializerOptions JsonOptions { get; }
+
+	/// <summary>
+	/// Logger for the application.
+	/// </summary>
+	public ILogger Logger =>
+		App.Logger;
+
 	/// <summary>
 	/// HTTP method.
 	/// </summary>
-	public string Method =>
-		Http.Request.Method;
+	public Method Method =>
+		Method.Wrap(Http.Request.Method);
 
 	/// <summary>
 	/// Request path ("/" if empty).
@@ -40,8 +53,29 @@ public sealed record class Req(
 		Http.Request.Query;
 
 	/// <summary>
+	/// Typed values captured from the path when the route matched, keyed by parameter name.
+	/// </summary>
+	public RouteValuesDictionary RouteValues { get; }
+
+	/// <summary>
+	/// Service provider for the application.
+	/// </summary>
+	public IServiceProvider Services =>
+		App.Services;
+
+	/// <summary>
 	/// Cancelled when the client disconnects.
 	/// </summary>
 	public CancellationToken Cancellation =>
 		Http.RequestAborted;
+
+	/// <summary>
+	/// Create a request from the application, the HTTP context, the captured route values and the JSON options.
+	/// </summary>
+	/// <param name="app">Application the request belongs to.</param>
+	/// <param name="http">HTTP context for the current request.</param>
+	/// <param name="values">Route values captured by the router.</param>
+	/// <param name="json">JSON options used by binders.</param>
+	public Req(WebApplication app, HttpContext http, RouteValuesDictionary values, JsonSerializerOptions json) =>
+		(App, Http, RouteValues, JsonOptions) = (app, http, values, json);
 }
