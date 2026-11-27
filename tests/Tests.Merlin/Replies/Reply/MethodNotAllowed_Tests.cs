@@ -1,6 +1,7 @@
 // Merlin: Unit Tests
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
+using System.Text.Json;
 using Merlin.Domain;
 using Microsoft.AspNetCore.Http;
 using Wrap.Testing;
@@ -45,5 +46,18 @@ public class MethodNotAllowed_Tests
 
 		// Assert
 		Assert.Equal("GET, PUT", response.Headers.Allow);
+	}
+
+	[Fact]
+	public async Task Writes_Allowed_Methods_As_Detail()
+	{
+		// Arrange
+		var reply = Reply.MethodNotAllowed([Method.Get, Method.Put]).AssertOk();
+
+		// Act
+		var (_, _, body) = await WriteAsync(reply);
+
+		// Assert
+		Assert.Equal("Allowed methods: GET, PUT", JsonElement.Parse(body).GetProperty("detail").GetString());
 	}
 }
