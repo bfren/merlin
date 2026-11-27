@@ -49,7 +49,7 @@ public class Error_Tests
 		public void Maps_Kind_To_Status(string kind, int expected)
 		{
 			// Arrange
-			var failure = R.Fail(Rnd.Str).Knd(KindOf(kind));
+			var failure = R.Fail(Rnd.Str).WithKind(KindOf(kind));
 
 			// Act
 			var result = Reply.Error(failure);
@@ -75,7 +75,7 @@ public class Error_Tests
 		public void Custom_Kind_Is_500()
 		{
 			// Arrange
-			var failure = R.Fail(Rnd.Str).Knd(new($"Tests.{Rnd.Str}"));
+			var failure = R.Fail(Rnd.Str).WithKind(new($"Tests.{Rnd.Str}"));
 
 			// Act
 			var result = Reply.Error(failure);
@@ -103,7 +103,7 @@ public class Error_Tests
 		public async Task Writes_Status()
 		{
 			// Arrange
-			var reply = Reply.Error(R.Fail(Rnd.Str).Knd(FailureKind.NotFound)).AssertOk();
+			var reply = Reply.Error(R.Fail(Rnd.Str).WithKind(FailureKind.NotFound)).AssertOk();
 
 			// Act
 			var (_, response, _) = await WriteAsync(reply);
@@ -144,7 +144,7 @@ public class Error_Tests
 		{
 			// Arrange
 			var message = Rnd.Str;
-			var failure = R.Fail(message).Knd(Status.KindOf(kind));
+			var failure = R.Fail(message).WithKind(Status.KindOf(kind));
 
 			// Act
 			var result = await ProblemAsync(failure);
@@ -159,7 +159,7 @@ public class Error_Tests
 		{
 			// Arrange
 			var (name, number) = (Rnd.Str, Rnd.Int);
-			var failure = R.Fail("Value {Name} is not {Number}.", name, number).Knd(Status.KindOf(kind));
+			var failure = R.Fail("Value {Name} is not {Number}.", name, number).WithKind(Status.KindOf(kind));
 
 			// Act
 			var result = await ProblemAsync(failure);
@@ -174,7 +174,7 @@ public class Error_Tests
 		{
 			// Arrange
 			var message = Rnd.Str;
-			var failure = R.Fail(message).Knd(Status.KindOf(kind));
+			var failure = R.Fail(message).WithKind(Status.KindOf(kind));
 
 			// Act
 			var result = await ProblemAsync(failure);
@@ -189,7 +189,7 @@ public class Error_Tests
 		{
 			// Arrange
 			var message = Rnd.Str;
-			var failure = R.Fail(message).Knd(new($"Tests.{Rnd.Str}"));
+			var failure = R.Fail(message).WithKind(new($"Tests.{Rnd.Str}"));
 
 			// Act
 			var result = await ProblemAsync(failure);
@@ -219,7 +219,7 @@ public class Error_Tests
 		{
 			// Arrange
 			var (type, function) = (Rnd.Str, Rnd.Str);
-			var failure = R.Fail(Rnd.Str).Ctx(type, function).Knd(Status.KindOf(kind));
+			var failure = R.Fail(Rnd.Str).WithContext(type, function).WithKind(Status.KindOf(kind));
 
 			// Act
 			var result = await ProblemAsync(failure);

@@ -15,7 +15,7 @@ public partial class StartAsync_Tests
 		public async Task Cancelled_Kind_Is_Not_Logged_As_Error_And_Writes_No_Reply()
 		{
 			// Arrange
-			await using var host = await TestHost.StartAsync(r => r.Map("/").Get(_ => R.Fail(Rnd.Str).Knd(FailureKind.Cancelled)));
+			await using var host = await TestHost.StartAsync(r => r.Map("/").Get(_ => R.Fail(Rnd.Str).WithKind(FailureKind.Cancelled)));
 
 			// Act
 			var (_, _, done) = await host.SendAsync(HttpMethod.Get, "/");

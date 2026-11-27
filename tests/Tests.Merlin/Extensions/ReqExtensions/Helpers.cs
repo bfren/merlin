@@ -42,5 +42,5 @@ internal static class Helpers
 	/// The context a binder's failure should have.
 	/// </summary>
 	public static string? ContextOf(string function) =>
-		R.Fail(string.Empty).Ctx(nameof(Merlin.Extensions.ReqExtensions), function).Context;
+		R.Fail(string.Empty).WithContext(nameof(Merlin.Extensions.ReqExtensions), function).Context;
 }

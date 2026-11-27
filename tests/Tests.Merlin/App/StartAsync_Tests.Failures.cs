@@ -35,7 +35,7 @@ public partial class StartAsync_Tests
 		public async Task Writes_Error_Reply_With_Status_From_Kind(string kind, int expected)
 		{
 			// Arrange
-			await using var host = await TestHost.StartAsync(r => r.Map("/").Get(_ => R.Fail(Rnd.Str).Knd(KindOf(kind))));
+			await using var host = await TestHost.StartAsync(r => r.Map("/").Get(_ => R.Fail(Rnd.Str).WithKind(KindOf(kind))));
 
 			// Act
 			var (response, body, done) = await host.SendAsync(HttpMethod.Get, "/");
@@ -52,7 +52,7 @@ public partial class StartAsync_Tests
 		{
 			// Arrange
 			var message = Rnd.Str;
-			await using var host = await TestHost.StartAsync(r => r.Map("/").Get(_ => R.Fail(message).Knd(FailureKind.Invalid)));
+			await using var host = await TestHost.StartAsync(r => r.Map("/").Get(_ => R.Fail(message).WithKind(FailureKind.Invalid)));
 
 			// Act
 			var (_, body, _) = await host.SendAsync(HttpMethod.Get, "/");

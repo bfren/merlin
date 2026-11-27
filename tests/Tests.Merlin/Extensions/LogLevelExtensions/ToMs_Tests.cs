@@ -1,6 +1,7 @@
 // Merlin: Unit Tests
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
+using Wrap.Extensions;
 using MsLevel = Microsoft.Extensions.Logging.LogLevel;
 using WrapLevel = Wrap.Logging.LogLevel;
 
@@ -21,7 +22,7 @@ public class ToMs_Tests
 		// Arrange
 
 		// Act
-		var result = input.ToMs();
+		var result = input.ToMsLevel();
 
 		// Assert
 		Assert.Equal(expected, result);
@@ -34,7 +35,7 @@ public class ToMs_Tests
 		var levels = Enum.GetValues<WrapLevel>();
 
 		// Act
-		var result = levels.Select(x => x.ToMs());
+		var result = levels.Select(x => x.ToMsLevel());
 
 		// Assert
 		Assert.All(result, x => Assert.True(Enum.IsDefined(x) && x != MsLevel.None));
@@ -47,7 +48,7 @@ public class ToMs_Tests
 		var input = WrapLevel.Debug | WrapLevel.Error;
 
 		// Act
-		var result = input.ToMs();
+		var result = input.ToMsLevel();
 
 		// Assert
 		Assert.Equal(MsLevel.Warning, result);

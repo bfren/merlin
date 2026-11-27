@@ -64,7 +64,7 @@ public class Log_Tests
 		{
 			// Arrange
 			var logger = new TestLogger();
-			var failure = R.Fail(Rnd.Str).Lvl(level);
+			var failure = R.Fail(Rnd.Str).WithLevel(level);
 
 			// Act
 			logger.Log(failure);
@@ -78,7 +78,7 @@ public class Log_Tests
 		{
 			// Arrange
 			var logger = new TestLogger(LogLevel.Error);
-			var failure = R.Fail(Rnd.Str).Lvl(WrapLevel.Information).Ctx(Rnd.Str, Rnd.Str);
+			var failure = R.Fail(Rnd.Str).WithLevel(WrapLevel.Information).WithContext(Rnd.Str, Rnd.Str);
 
 			// Act
 			logger.Log(failure);
@@ -93,7 +93,7 @@ public class Log_Tests
 		{
 			// Arrange
 			var logger = new TestLogger(LogLevel.Error);
-			var failure = R.Fail(Rnd.Str).Lvl(WrapLevel.Fatal);
+			var failure = R.Fail(Rnd.Str).WithLevel(WrapLevel.Fatal);
 
 			// Act
 			logger.Log(failure);
@@ -191,7 +191,7 @@ public class Log_Tests
 		{
 			// Arrange
 			var logger = new TestLogger();
-			var failure = R.Fail(Rnd.Str).Ctx(Rnd.Str, Rnd.Str);
+			var failure = R.Fail(Rnd.Str).WithContext(Rnd.Str, Rnd.Str);
 
 			// Act
 			logger.Log(failure);
@@ -207,7 +207,7 @@ public class Log_Tests
 		{
 			// Arrange
 			var logger = new TestLogger();
-			var failure = R.Fail(Rnd.Str).Ctx(Rnd.Str, Rnd.Str);
+			var failure = R.Fail(Rnd.Str).WithContext(Rnd.Str, Rnd.Str);
 
 			// Act
 			logger.Log(failure);
