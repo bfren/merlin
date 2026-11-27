@@ -14,7 +14,7 @@ public class Error_Tests
 	public class Status
 	{
 		// kinds by name, as FailureKind is not serializable and Test Explorer could not list each row
-		private static readonly Dictionary<string, FailureKind> kinds = new()
+		private static readonly Dictionary<string, FailureKind> FailureKinds = new()
 		{
 			[nameof(FailureKind.Invalid)] = FailureKind.Invalid,
 			[nameof(FailureKind.Unauthenticated)] = FailureKind.Unauthenticated,
@@ -28,7 +28,7 @@ public class Error_Tests
 		};
 
 		public static FailureKind KindOf(string name) =>
-			kinds[name];
+			FailureKinds[name];
 
 		public static TheoryData<string, int> Kinds =>
 			new()

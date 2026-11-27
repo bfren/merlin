@@ -121,7 +121,7 @@ public class Problem_Tests
 
 			// Assert
 			// an absent "type" means "about:blank" (RFC 9457 section 3.1.1)
-			Assert.Equal("""{"title":"Not Found","status":404}""", body);
+			Assert.Equal(/*lang=json,strict*/ """{"title":"Not Found","status":404}""", body);
 		}
 	}
 }

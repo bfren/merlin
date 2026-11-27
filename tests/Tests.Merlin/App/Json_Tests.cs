@@ -15,7 +15,7 @@ public class Json_Tests
 		var app = new App([]);
 
 		// Act
-		var result = Record.Exception(() => app.Json.GetTypeInfo<Problem>());
+		var result = Record.Exception(app.Json.GetTypeInfo<Problem>);
 
 		// Assert
 		Assert.Null(result);
@@ -32,6 +32,6 @@ public class Json_Tests
 		var result = JsonSerializer.Serialize(new Problem { Title = "Not Found", Status = 404 }, info);
 
 		// Assert
-		Assert.Equal("""{"title":"Not Found","status":404}""", result);
+		Assert.Equal(/*lang=json,strict*/ """{"title":"Not Found","status":404}""", result);
 	}
 }

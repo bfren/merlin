@@ -59,7 +59,7 @@ public class Json_Tests
 		public async Task Accepts_Json_Content_Types(string contentType)
 		{
 			// Arrange
-			var req = NewReq(contentType, """{"title":"x"}""");
+			var req = NewReq(contentType, /*lang=json,strict*/ """{"title":"x"}""");
 
 			// Act
 			var result = await req.Json(BinderJson.Default.PostDto);
@@ -72,7 +72,7 @@ public class Json_Tests
 		public async Task Ignores_Unknown_Properties()
 		{
 			// Arrange
-			var req = NewReq(Json, """{"title":"x","other":1}""");
+			var req = NewReq(Json, /*lang=json,strict*/ """{"title":"x","other":1}""");
 
 			// Act
 			var result = await req.Json(BinderJson.Default.PostDto);
@@ -105,7 +105,7 @@ public class Json_Tests
 		public async Task Wrong_Content_Type_Is_Invalid(string? contentType)
 		{
 			// Arrange
-			var req = NewReq(contentType, """{"title":"x"}""");
+			var req = NewReq(contentType, /*lang=json,strict*/ """{"title":"x"}""");
 
 			// Act
 			var result = await req.Json(BinderJson.Default.PostDto);
@@ -147,9 +147,9 @@ public class Json_Tests
 		}
 
 		[Theory]
-		[InlineData("""{"views":"abc"}""", "$.views")]
-		[InlineData("""{"views":"3"}""", "$.views")]
-		[InlineData("""{"draft":"yes"}""", "$.draft")]
+		[InlineData(/*lang=json,strict*/ """{"views":"abc"}""", "$.views")]
+		[InlineData(/*lang=json,strict*/ """{"views":"3"}""", "$.views")]
+		[InlineData(/*lang=json,strict*/ """{"draft":"yes"}""", "$.draft")]
 		[InlineData("""[1,2]""", "$")]
 		public async Task Wrong_Shape_Is_Invalid_With_Path(string body, string path)
 		{
@@ -167,7 +167,7 @@ public class Json_Tests
 		public async Task Cancelled_Read_Has_Kind_Cancelled()
 		{
 			// Arrange
-			var req = NewReq(Json, """{"title":"x"}""", cancelled: true);
+			var req = NewReq(Json, /*lang=json,strict*/ """{"title":"x"}""", cancelled: true);
 
 			// Act
 			var result = await req.Json(BinderJson.Default.PostDto);
@@ -202,7 +202,7 @@ public class Json_Tests
 				TypeInfoResolver = BinderJson.Default,
 				NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString
 			};
-			var req = NewReq(Json, """{"views":"3"}""", options);
+			var req = NewReq(Json, /*lang=json,strict*/ """{"views":"3"}""", options);
 
 			// Act
 			var result = await req.Json<PostDto>();
@@ -215,21 +215,21 @@ public class Json_Tests
 		public async Task Unregistered_Type_Is_Unexpected()
 		{
 			// Arrange
-			var req = NewReq(Json, """{"value":"x"}""");
+			var req = NewReq(Json, /*lang=json,strict*/ """{"value":"x"}""");
 
 			// Act
 			var result = await req.Json<Unregistered>();
 
 			// Assert
 			// the type was never registered: the server's fault, not the client's
-			AssertFailure(result, Wrap.FailureKind.Unexpected, Json_Tests.Unregistered, nameof(ReqExtensions_Tests.Unregistered));
+			AssertFailure(result, Wrap.FailureKind.Unexpected, Unregistered, nameof(ReqExtensions_Tests.Unregistered));
 		}
 
 		[Fact]
 		public async Task Wrong_Content_Type_Is_Invalid()
 		{
 			// Arrange
-			var req = NewReq("text/plain", """{"title":"x"}""");
+			var req = NewReq("text/plain", /*lang=json,strict*/ """{"title":"x"}""");
 
 			// Act
 			var result = await req.Json<PostDto>();
@@ -255,7 +255,7 @@ public class Json_Tests
 		public async Task Cancelled_Read_Has_Kind_Cancelled()
 		{
 			// Arrange
-			var req = NewReq(Json, """{"title":"x"}""", cancelled: true);
+			var req = NewReq(Json, /*lang=json,strict*/ """{"title":"x"}""", cancelled: true);
 
 			// Act
 			var result = await req.Json<PostDto>();

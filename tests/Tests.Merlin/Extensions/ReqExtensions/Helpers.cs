@@ -17,7 +17,7 @@ internal static class Helpers
 	{
 		var http = new DefaultHttpContext();
 		http.Request.QueryString = new(query);
-		return new(http, routeValues ?? ImmutableDictionary<string, object>.Empty, new JsonSerializerOptions());
+		return new(http, routeValues ?? [], new JsonSerializerOptions());
 	}
 
 	/// <summary>
@@ -33,7 +33,7 @@ internal static class Helpers
 		http.Request.ContentLength = bytes.Length;
 		return new(
 			http,
-			ImmutableDictionary<string, object>.Empty,
+			[],
 			options ?? new JsonSerializerOptions { TypeInfoResolver = BinderJson.Default }
 		);
 	}
@@ -42,5 +42,5 @@ internal static class Helpers
 	/// The context a binder's failure should have.
 	/// </summary>
 	public static string? ContextOf(string function) =>
-		R.Fail(string.Empty).WithContext(nameof(Merlin.Extensions.ReqExtensions), function).Context;
+		R.Fail(string.Empty).WithContext(nameof(ReqExtensions), function).Context;
 }

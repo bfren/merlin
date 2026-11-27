@@ -2,7 +2,6 @@
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
 using System.Text.Json;
-using Merlin.Replies;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Wrap;
@@ -84,7 +83,7 @@ public partial class StartAsync_Tests
 			await using var host = await TestHost.StartAsync(r => r.Map("/").Get(async req =>
 			{
 				await req.Http.Response.WriteAsync(partial, req.Cancellation);
-				return (Result<Reply>)R.Fail(message);
+				return R.Fail(message);
 			}));
 
 			// Act

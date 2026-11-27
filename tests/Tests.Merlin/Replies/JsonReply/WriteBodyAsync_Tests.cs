@@ -43,7 +43,7 @@ public class WriteBodyAsync_Tests
 		await reply.WriteAsync(response, options, TestContext.Current.CancellationToken);
 
 		// Assert
-		Assert.Equal("""{"ID":1,"NAME":"x"}""", System.Text.Encoding.UTF8.GetString(stream.ToArray()));
+		Assert.Equal(/*lang=json,strict*/ """{"ID":1,"NAME":"x"}""", System.Text.Encoding.UTF8.GetString(stream.ToArray()));
 	}
 
 	[Fact]
@@ -101,6 +101,6 @@ public class WriteBodyAsync_Tests
 
 		// Assert
 		result.AssertTrue();
-		Assert.Equal("""{"title":"Not Found","status":404}""", body);
+		Assert.Equal(/*lang=json,strict*/ """{"title":"Not Found","status":404}""", body);
 	}
 }
