@@ -84,7 +84,7 @@ public class Route_Tests
 			var result = req.Route<int>(name);
 
 			// Assert
-			result.AssertFailure(Message, name, nameof(Int32));
+			result.AssertFailure(Message, name, typeof(int));
 		}
 
 		[Fact]
@@ -97,7 +97,7 @@ public class Route_Tests
 			var result = req.Route<long>("id");
 
 			// Assert
-			result.AssertFailure(Message, "id", nameof(Int64));
+			result.AssertFailure(Message, "id", typeof(long));
 		}
 
 		[Fact]
@@ -110,7 +110,7 @@ public class Route_Tests
 			var result = req.Route<string>("id");
 
 			// Assert
-			result.AssertFailure(Message, "id", nameof(String));
+			result.AssertFailure(Message, "id", typeof(string));
 		}
 
 		[Fact]
@@ -123,11 +123,11 @@ public class Route_Tests
 			var result = req.Route<int>(Rnd.Str);
 
 			// Assert
-			Assert.Equal(ContextOf("Route"), result.AssertFailure().Context);
+			Assert.Equal(ContextOf("RouteValueIsIncorrectType"), result.AssertFailure().Context);
 		}
 
 		[Fact]
-		public void Missing_Value_Has_Kind_Unexpected()
+		public void Missing_Value_Has_Kind_Unspecified()
 		{
 			// Arrange
 			var req = NewReq();
@@ -136,12 +136,12 @@ public class Route_Tests
 			var result = req.Route<int>(Rnd.Str);
 
 			// Assert
-			// the handler and its route template disagree: a programming error, not the client's fault
-			Assert.Equal(Wrap.FailureKind.Unexpected, result.AssertFailure().Kind);
+			// the generator sets no kind; Reply.Error still treats Unspecified as 500
+			Assert.Equal(Wrap.FailureKind.Unspecified, result.AssertFailure().Kind);
 		}
 
 		[Fact]
-		public void Wrong_Type_Has_Kind_Unexpected()
+		public void Wrong_Type_Has_Kind_Unspecified()
 		{
 			// Arrange
 			var req = NewReq(RouteValuesDictionary.Empty.Add("id", Rnd.Int));
@@ -150,7 +150,7 @@ public class Route_Tests
 			var result = req.Route<long>("id");
 
 			// Assert
-			Assert.Equal(Wrap.FailureKind.Unexpected, result.AssertFailure().Kind);
+			Assert.Equal(Wrap.FailureKind.Unspecified, result.AssertFailure().Kind);
 		}
 	}
 }

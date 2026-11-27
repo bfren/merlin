@@ -153,7 +153,7 @@ public class Query_Tests
 			var result = req.Query<int>(name);
 
 			// Assert
-			result.AssertFailure(Message, name, nameof(Int32));
+			result.AssertFailure(Message, name, typeof(int));
 		}
 
 		[Fact]
@@ -166,7 +166,7 @@ public class Query_Tests
 			var result = req.Query<string>("q");
 
 			// Assert
-			result.AssertFailure(Message, "q", nameof(String));
+			result.AssertFailure(Message, "q", typeof(string));
 		}
 
 		[Theory]
@@ -182,7 +182,7 @@ public class Query_Tests
 			var result = req.Query<int>("page");
 
 			// Assert
-			result.AssertFailure(Message, "page", nameof(Int32));
+			result.AssertFailure(Message, "page", typeof(int));
 		}
 
 		[Fact]
@@ -195,7 +195,7 @@ public class Query_Tests
 			var result = req.Query<int>(Rnd.Str);
 
 			// Assert
-			Assert.Equal(ContextOf("Query"), result.AssertFailure().Context);
+			Assert.Equal(ContextOf("QueryValueMissingOrInvalidType"), result.AssertFailure().Context);
 		}
 
 		[Theory]

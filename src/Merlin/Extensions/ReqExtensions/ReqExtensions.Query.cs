@@ -19,14 +19,14 @@ public static partial class ReqExtensions
 		where T : IParsable<T> =>
 		@this.Query.TryGetValue(name, out var x) switch
 		{
-			true when T.TryParse(x.ToString(), F.DefaultCulture, out var y) =>
+			true when T.TryParse(x[0]?.ToString(), F.DefaultCulture, out var y) =>
 				y,
 
 			_ =>
 				QueryValueMissingOrInvalidType(name, typeof(T))
 		};
 
-	[Failure("Query value {Name} is missing or not a valid {Type}.")]
+	[Failure("Query value {Name} is missing or not a valid {Type}.", Kind = nameof(FailureKind.Invalid))]
 	private static partial Failure QueryValueMissingOrInvalidType(string name, Type type);
 
 	/// <summary>
@@ -43,7 +43,7 @@ public static partial class ReqExtensions
 		where T : IParsable<T> =>
 		@this.Query.TryGetValue(name, out var x) switch
 		{
-			true when T.TryParse(x.ToString(), F.DefaultCulture, out var y) =>
+			true when T.TryParse(x[0]?.ToString(), F.DefaultCulture, out var y) =>
 				y,
 
 			_ =>
