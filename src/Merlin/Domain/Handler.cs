@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Merlin.Replies;
 using Wrap;
 
-namespace Merlin.Routing;
+namespace Merlin.Domain;
 
 /// <summary>
 /// Handles a request that matched a route.
