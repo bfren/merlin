@@ -68,5 +68,6 @@ public sealed record class RouteValuesDictionary : IReadOnlyDictionary<string, o
 	public IEnumerator<KeyValuePair<string, object>> GetEnumerator() =>
 		Items.GetEnumerator();
 
-	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+	IEnumerator IEnumerable.GetEnumerator() =>
+		GetEnumerator();
 }
