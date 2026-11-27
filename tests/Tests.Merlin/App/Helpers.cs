@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using Merlin.Domain;
 using Merlin.Routing;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -81,10 +82,10 @@ internal sealed class TestHost : IAsyncDisposable
 	/// <summary>
 	/// Send a request and wait until the adapter has finished with it.
 	/// </summary>
-	public async Task<(HttpResponseMessage Response, string Body, Done Done)> SendAsync(HttpMethod method, string path)
+	public async Task<(HttpResponseMessage Response, string Body, Done Done)> SendAsync(Method method, string path)
 	{
 		var ct = TestContext.Current.CancellationToken;
-		var response = await Client.SendAsync(new(method, path), ct);
+		var response = await Client.SendAsync(new(new HttpMethod(method.Value), path), ct);
 		var body = await response.Content.ReadAsStringAsync(ct);
 		var done = await Completed.ReadAsync(ct);
 		return (response, body, done);

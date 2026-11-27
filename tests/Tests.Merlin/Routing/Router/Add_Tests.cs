@@ -1,11 +1,13 @@
 // Merlin: Unit Tests
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
+using Merlin.Domain;
+
 namespace Merlin.Routing.Router_Tests;
 
 public class Add_Tests
 {
-	private static Exception? Add(Router router, string method, string source) =>
+	private static Exception? Add(Router router, Method method, string source) =>
 		Record.Exception(() => router.Add(method, Template.Parse(source, router.Types), Substitute.For<Handler>()));
 
 	public class Duplicates
@@ -20,10 +22,10 @@ public class Add_Tests
 		{
 			// Arrange
 			var router = new Router();
-			Add(router, "GET", first);
+			Add(router, Method.Get, first);
 
 			// Act
-			var result = Add(router, "GET", second);
+			var result = Add(router, Method.Get, second);
 
 			// Assert
 			var ex = Assert.IsType<InvalidOperationException>(result);
@@ -31,17 +33,17 @@ public class Add_Tests
 		}
 
 		[Fact]
-		public void Method_Is_Case_Insensitive()
+		public void Method_Is_Case_Sensitive()
 		{
 			// Arrange
 			var router = new Router();
-			Add(router, "GET", "/posts");
+			Add(router, Method.Get, "/posts");
 
 			// Act
-			var result = Add(router, "get", "/posts");
+			var result = Add(router, Method.Wrap("get"), "/posts");
 
 			// Assert
-			Assert.IsType<InvalidOperationException>(result);
+			Assert.Null(result);
 		}
 
 		[Fact]
@@ -49,10 +51,10 @@ public class Add_Tests
 		{
 			// Arrange
 			var router = new Router();
-			Add(router, "GET", "/posts");
+			Add(router, Method.Get, "/posts");
 
 			// Act
-			var result = Add(router, "POST", "/posts");
+			var result = Add(router, Method.Post, "/posts");
 
 			// Assert
 			Assert.Null(result);
@@ -63,10 +65,10 @@ public class Add_Tests
 		{
 			// Arrange
 			var router = new Router();
-			Add(router, "GET", "/files/{path:*}");
+			Add(router, Method.Get, "/files/{path:*}");
 
 			// Act
-			var result = Add(router, "GET", "/files/{rest:*}");
+			var result = Add(router, Method.Get, "/files/{rest:*}");
 
 			// Assert
 			var ex = Assert.IsType<InvalidOperationException>(result);
@@ -78,10 +80,10 @@ public class Add_Tests
 		{
 			// Arrange
 			var router = new Router();
-			Add(router, "GET", "/files/{path:*}");
+			Add(router, Method.Get, "/files/{path:*}");
 
 			// Act
-			var result = Add(router, "PUT", "/files/{path:*}");
+			var result = Add(router, Method.Put, "/files/{path:*}");
 
 			// Assert
 			Assert.Null(result);
@@ -104,10 +106,10 @@ public class Add_Tests
 		{
 			// Arrange
 			var router = new Router();
-			Add(router, "GET", first);
+			Add(router, Method.Get, first);
 
 			// Act
-			var result = Add(router, "GET", second);
+			var result = Add(router, Method.Get, second);
 
 			// Assert
 			Assert.Null(result);
@@ -124,10 +126,10 @@ public class Add_Tests
 		{
 			// Arrange
 			var router = new Router();
-			Add(router, "GET", first);
+			Add(router, Method.Get, first);
 
 			// Act
-			var result = Add(router, "GET", second);
+			var result = Add(router, Method.Get, second);
 
 			// Assert
 			var ex = Assert.IsType<InvalidOperationException>(result);
@@ -139,10 +141,10 @@ public class Add_Tests
 		{
 			// Arrange
 			var router = new Router();
-			Add(router, "GET", "/posts/{id:int}");
+			Add(router, Method.Get, "/posts/{id:int}");
 
 			// Act
-			var result = Add(router, "POST", "/posts/{num:int}");
+			var result = Add(router, Method.Post, "/posts/{num:int}");
 
 			// Assert
 			Assert.Null(result);
@@ -157,7 +159,7 @@ public class Add_Tests
 		router.Lock();
 
 		// Act
-		var result = Add(router, "GET", "/posts");
+		var result = Add(router, Method.Get, "/posts");
 
 		// Assert
 		var ex = Assert.IsType<InvalidOperationException>(result);

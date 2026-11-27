@@ -1,6 +1,8 @@
 // Merlin: Unit Tests
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
+using Merlin.Domain;
+
 namespace Merlin.Routing.Router_Tests;
 
 public partial class Match_Tests
@@ -16,7 +18,7 @@ public partial class Match_Tests
 			router.Map("/posts").Get(handler);
 
 			// Act
-			var result = router.Match("GET", "/posts");
+			var result = router.Match(Method.Get, "/posts");
 
 			// Assert
 			var matched = Assert.IsType<Matched>(result);
@@ -35,7 +37,7 @@ public partial class Match_Tests
 			router.Map("/").Get(handler);
 
 			// Act
-			var result = router.Match("GET", path);
+			var result = router.Match(Method.Get, path);
 
 			// Assert
 			var matched = Assert.IsType<Matched>(result);
@@ -51,7 +53,7 @@ public partial class Match_Tests
 			router.Map("/posts").Get(handler);
 
 			// Act
-			var result = router.Match("GET", "/POSTS");
+			var result = router.Match(Method.Get, "/POSTS");
 
 			// Assert
 			var matched = Assert.IsType<Matched>(result);
@@ -67,7 +69,7 @@ public partial class Match_Tests
 			router.Map("/posts").Get(handler);
 
 			// Act
-			var result = router.Match("GET", "/posts/");
+			var result = router.Match(Method.Get, "/posts/");
 
 			// Assert
 			var matched = Assert.IsType<Matched>(result);
@@ -87,7 +89,7 @@ public partial class Match_Tests
 			router.Map("/posts/comments").Get(handler);
 
 			// Act
-			var result = router.Match("GET", path);
+			var result = router.Match(Method.Get, path);
 
 			// Assert
 			var matched = Assert.IsType<Matched>(result);
@@ -102,7 +104,7 @@ public partial class Match_Tests
 			router.Map("/posts").Get(NewHandler());
 
 			// Act
-			var result = router.Match("GET", "/posts/extra");
+			var result = router.Match(Method.Get, "/posts/extra");
 
 			// Assert
 			Assert.IsType<NotFound>(result);
@@ -116,7 +118,7 @@ public partial class Match_Tests
 			router.Map("/posts/latest").Get(NewHandler());
 
 			// Act
-			var result = router.Match("GET", "/posts");
+			var result = router.Match(Method.Get, "/posts");
 
 			// Assert
 			Assert.IsType<NotFound>(result);

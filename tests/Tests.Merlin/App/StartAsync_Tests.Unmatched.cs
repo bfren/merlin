@@ -2,6 +2,7 @@
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
 using System.Text.Json;
+using Merlin.Domain;
 using Merlin.Replies;
 using Microsoft.Extensions.Logging;
 
@@ -18,7 +19,7 @@ public partial class StartAsync_Tests
 			await using var host = await TestHost.StartAsync(r => r.Map("/").Get(_ => Reply.Text(Rnd.Str)));
 
 			// Act
-			var (response, body, _) = await host.SendAsync(HttpMethod.Get, $"/{Rnd.Str}");
+			var (response, body, _) = await host.SendAsync(Method.Get, $"/{Rnd.Str}");
 
 			// Assert
 			Assert.Equal(404, (int)response.StatusCode);
@@ -33,7 +34,7 @@ public partial class StartAsync_Tests
 			await using var host = await TestHost.StartAsync(r => r.Map("/").Get(_ => Reply.Text(Rnd.Str)).Put(_ => Reply.Text(Rnd.Str)));
 
 			// Act
-			var (response, body, _) = await host.SendAsync(HttpMethod.Post, "/");
+			var (response, body, _) = await host.SendAsync(Method.Post, "/");
 
 			// Assert
 			Assert.Equal(405, (int)response.StatusCode);
@@ -49,7 +50,7 @@ public partial class StartAsync_Tests
 			await using var host = await TestHost.StartAsync(r => r.Map("/").Get(_ => Reply.Text(Rnd.Str)));
 
 			// Act
-			_ = await host.SendAsync(HttpMethod.Get, $"/{Rnd.Str}");
+			_ = await host.SendAsync(Method.Get, $"/{Rnd.Str}");
 
 			// Assert
 			Assert.DoesNotContain(host.Logs, l => l.Level >= LogLevel.Error);

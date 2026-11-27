@@ -1,6 +1,7 @@
 // Merlin: Unit Tests
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
+using Merlin.Domain;
 using Merlin.Replies;
 using Wrap;
 
@@ -9,7 +10,7 @@ namespace Merlin.Routing.RouteBuilder_Tests;
 public class Put_Tests
 {
 	// adding a second handler for the same method and template throws only if the builder added the first
-	private static Exception? AddAgain(Router router, Template template, string method) =>
+	private static Exception? AddAgain(Router router, Template template, Method method) =>
 		Record.Exception(() => router.Add(method, template, Substitute.For<Handler>()));
 
 	[Fact]
@@ -24,7 +25,7 @@ public class Put_Tests
 		builder.Put(Substitute.For<Handler>());
 
 		// Assert
-		Assert.IsType<InvalidOperationException>(AddAgain(router, template, "PUT"));
+		Assert.IsType<InvalidOperationException>(AddAgain(router, template, Method.Put));
 	}
 
 	[Fact]
@@ -39,7 +40,7 @@ public class Put_Tests
 		builder.Put(Substitute.For<Func<Req, Result<Reply>>>());
 
 		// Assert
-		Assert.IsType<InvalidOperationException>(AddAgain(router, template, "PUT"));
+		Assert.IsType<InvalidOperationException>(AddAgain(router, template, Method.Put));
 	}
 
 	[Fact]
@@ -49,7 +50,7 @@ public class Put_Tests
 		var router = new Router();
 		var template = Template.Parse("/posts", router.Types);
 		var builder = new RouteBuilder(router, template);
-		var other = "PUT" == "GET" ? "POST" : "GET";
+		var other = Method.Put == Method.Get ? Method.Post : Method.Get;
 
 		// Act
 		builder.Put(Substitute.For<Handler>());

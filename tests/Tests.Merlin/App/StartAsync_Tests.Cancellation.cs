@@ -1,6 +1,7 @@
 // Merlin: Unit Tests
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
+using Merlin.Domain;
 using Merlin.Replies;
 using Microsoft.Extensions.Logging;
 using Wrap;
@@ -18,7 +19,7 @@ public partial class StartAsync_Tests
 			await using var host = await TestHost.StartAsync(r => r.Map("/").Get(_ => R.Fail(Rnd.Str).WithKind(FailureKind.Cancelled)));
 
 			// Act
-			var (_, _, done) = await host.SendAsync(HttpMethod.Get, "/");
+			var (_, _, done) = await host.SendAsync(Method.Get, "/");
 
 			// Assert
 			Assert.DoesNotContain(host.Logs, l => l.Level >= LogLevel.Error);

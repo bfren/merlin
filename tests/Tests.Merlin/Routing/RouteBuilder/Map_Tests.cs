@@ -1,6 +1,8 @@
 // Merlin: Unit Tests
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
+using Merlin.Domain;
+
 namespace Merlin.Routing.RouteBuilder_Tests;
 
 public class Map_Tests
@@ -34,8 +36,8 @@ public class Map_Tests
 			.Map("/b").Post(Substitute.For<Handler>());
 
 		// Assert
-		Assert.Throws<InvalidOperationException>(() => router.Add("GET", a, Substitute.For<Handler>()));
-		Assert.Throws<InvalidOperationException>(() => router.Add("POST", b, Substitute.For<Handler>()));
+		Assert.Throws<InvalidOperationException>(() => router.Add(Method.Get, a, Substitute.For<Handler>()));
+		Assert.Throws<InvalidOperationException>(() => router.Add(Method.Post, b, Substitute.For<Handler>()));
 	}
 
 	[Fact]

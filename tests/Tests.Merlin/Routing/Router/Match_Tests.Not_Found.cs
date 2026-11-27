@@ -1,6 +1,8 @@
 // Merlin: Unit Tests
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
+using Merlin.Domain;
+
 namespace Merlin.Routing.Router_Tests;
 
 public partial class Match_Tests
@@ -15,7 +17,7 @@ public partial class Match_Tests
 			router.Map("/posts").Get(NewHandler());
 
 			// Act
-			var result = router.Match("GET", "/other");
+			var result = router.Match(Method.Get, "/other");
 
 			// Assert
 			Assert.IsType<NotFound>(result);
@@ -28,7 +30,7 @@ public partial class Match_Tests
 			var router = new Router();
 
 			// Act
-			var result = router.Match("GET", "/posts");
+			var result = router.Match(Method.Get, "/posts");
 
 			// Assert
 			Assert.IsType<NotFound>(result);
@@ -42,7 +44,7 @@ public partial class Match_Tests
 			router.Map("/posts");
 
 			// Act
-			var result = router.Match("GET", "/posts");
+			var result = router.Match(Method.Get, "/posts");
 
 			// Assert
 			Assert.IsType<NotFound>(result);

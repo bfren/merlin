@@ -1,6 +1,8 @@
 // Merlin: Unit Tests
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
+using Merlin.Domain;
+
 namespace Merlin.Routing.Router_Tests;
 
 public partial class Match_Tests
@@ -17,8 +19,8 @@ public partial class Match_Tests
 			router.Map("/posts").Get(get).Post(post);
 
 			// Act
-			var getResult = router.Match("GET", "/posts");
-			var postResult = router.Match("POST", "/posts");
+			var getResult = router.Match(Method.Get, "/posts");
+			var postResult = router.Match(Method.Post, "/posts");
 
 			// Assert
 			Assert.Same(get, Assert.IsType<Matched>(getResult).Handler);
@@ -26,18 +28,18 @@ public partial class Match_Tests
 		}
 
 		[Fact]
-		public void Ignores_Method_Case()
+		public void Method_Is_Case_Sensitive()
 		{
 			// Arrange
 			var router = new Router();
-			var handler = NewHandler();
-			router.Map("/posts").Get(handler);
+			router.Map("/posts").Get(NewHandler());
 
 			// Act
-			var result = router.Match("get", "/posts");
+			var result = router.Match(Method.Wrap("get"), "/posts");
 
 			// Assert
-			Assert.Same(handler, Assert.IsType<Matched>(result).Handler);
+			var notAllowed = Assert.IsType<MethodNotAllowed>(result);
+			Assert.Equal([Method.Get, Method.Head], notAllowed.Allowed.Order());
 		}
 
 		[Fact]
@@ -49,7 +51,7 @@ public partial class Match_Tests
 			router.Map("/posts").Get(handler);
 
 			// Act
-			var result = router.Match("HEAD", "/posts");
+			var result = router.Match(Method.Head, "/posts");
 
 			// Assert
 			Assert.Same(handler, Assert.IsType<Matched>(result).Handler);
@@ -64,7 +66,7 @@ public partial class Match_Tests
 			router.Map("/posts/{id:int}").Get(handler);
 
 			// Act
-			var result = router.Match("HEAD", "/posts/42");
+			var result = router.Match(Method.Head, "/posts/42");
 
 			// Assert
 			var matched = Assert.IsType<Matched>(result);
@@ -83,8 +85,8 @@ public partial class Match_Tests
 			router.Map("/posts").Head(head);
 
 			// Act
-			var headResult = router.Match("HEAD", "/posts");
-			var getResult = router.Match("GET", "/posts");
+			var headResult = router.Match(Method.Head, "/posts");
+			var getResult = router.Match(Method.Get, "/posts");
 
 			// Assert
 			Assert.Same(head, Assert.IsType<Matched>(headResult).Handler);
@@ -99,11 +101,11 @@ public partial class Match_Tests
 			router.Map("/posts").Post(NewHandler());
 
 			// Act
-			var result = router.Match("HEAD", "/posts");
+			var result = router.Match(Method.Head, "/posts");
 
 			// Assert
 			var notAllowed = Assert.IsType<MethodNotAllowed>(result);
-			Assert.Equal(["POST"], notAllowed.Allowed);
+			Assert.Equal([Method.Post], notAllowed.Allowed);
 		}
 
 		[Fact]
@@ -114,11 +116,11 @@ public partial class Match_Tests
 			router.Map("/posts").Head(NewHandler());
 
 			// Act
-			var result = router.Match("GET", "/posts");
+			var result = router.Match(Method.Get, "/posts");
 
 			// Assert
 			var notAllowed = Assert.IsType<MethodNotAllowed>(result);
-			Assert.Equal(["HEAD"], notAllowed.Allowed);
+			Assert.Equal([Method.Head], notAllowed.Allowed);
 		}
 
 		[Fact]
@@ -129,11 +131,11 @@ public partial class Match_Tests
 			router.Map("/posts").Get(NewHandler()).Put(NewHandler());
 
 			// Act
-			var result = router.Match("DELETE", "/posts");
+			var result = router.Match(Method.Delete, "/posts");
 
 			// Assert
 			var notAllowed = Assert.IsType<MethodNotAllowed>(result);
-			Assert.Equal(["GET", "HEAD", "PUT"], notAllowed.Allowed.Order());
+			Assert.Equal([Method.Get, Method.Head, Method.Put], notAllowed.Allowed.Order());
 		}
 
 		[Fact]
@@ -145,11 +147,11 @@ public partial class Match_Tests
 			router.Map("/posts").Head(NewHandler());
 
 			// Act
-			var result = router.Match("DELETE", "/posts");
+			var result = router.Match(Method.Delete, "/posts");
 
 			// Assert
 			var notAllowed = Assert.IsType<MethodNotAllowed>(result);
-			Assert.Equal(["GET", "HEAD"], notAllowed.Allowed.Order());
+			Assert.Equal([Method.Get, Method.Head], notAllowed.Allowed.Order());
 		}
 
 		[Fact]
@@ -161,11 +163,11 @@ public partial class Match_Tests
 			router.Map("/other").Put(NewHandler());
 
 			// Act
-			var result = router.Match("POST", "/posts");
+			var result = router.Match(Method.Post, "/posts");
 
 			// Assert
 			var notAllowed = Assert.IsType<MethodNotAllowed>(result);
-			Assert.Equal(["GET", "HEAD"], notAllowed.Allowed.Order());
+			Assert.Equal([Method.Get, Method.Head], notAllowed.Allowed.Order());
 		}
 	}
 }

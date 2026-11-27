@@ -2,6 +2,7 @@
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
 using System.Text.Json;
+using Merlin.Domain;
 using Merlin.Extensions;
 using Merlin.Replies;
 using Microsoft.Extensions.Logging;
@@ -21,7 +22,7 @@ public partial class StartAsync_Tests
 			await using var host = await TestHost.StartAsync(r => r.Map("/").Get(_ => Reply.Text(text)));
 
 			// Act
-			var (response, body, _) = await host.SendAsync(HttpMethod.Get, "/");
+			var (response, body, _) = await host.SendAsync(Method.Get, "/");
 
 			// Assert
 			Assert.Equal(200, (int)response.StatusCode);
@@ -40,7 +41,7 @@ public partial class StartAsync_Tests
 			));
 
 			// Act
-			var (_, body, _) = await host.SendAsync(HttpMethod.Get, $"/posts/{id}");
+			var (_, body, _) = await host.SendAsync(Method.Get, $"/posts/{id}");
 
 			// Assert
 			Assert.Equal(id.ToString(), body);
@@ -58,7 +59,7 @@ public partial class StartAsync_Tests
 			}));
 
 			// Act
-			_ = await host.SendAsync(HttpMethod.Get, "/");
+			_ = await host.SendAsync(Method.Get, "/");
 
 			// Assert
 			Assert.Same(host.App.Json, options);
@@ -74,7 +75,7 @@ public partial class StartAsync_Tests
 			));
 
 			// Act
-			var (response, _, _) = await host.SendAsync(HttpMethod.Get, "/");
+			var (response, _, _) = await host.SendAsync(Method.Get, "/");
 
 			// Assert
 			Assert.Equal(201, (int)response.StatusCode);
@@ -90,7 +91,7 @@ public partial class StartAsync_Tests
 			await using var host = await TestHost.StartAsync(r => r.Map("/").Get(_ => Reply.Json(dto)));
 
 			// Act
-			var (_, body, _) = await host.SendAsync(HttpMethod.Get, "/");
+			var (_, body, _) = await host.SendAsync(Method.Get, "/");
 
 			// Assert
 			Assert.Equal($$"""{"id":{{dto.Id}},"name":"{{dto.Name}}"}""", body);
@@ -103,7 +104,7 @@ public partial class StartAsync_Tests
 			await using var host = await TestHost.StartAsync(r => r.Map("/").Get(_ => Reply.Json(new UnregisteredDto(Rnd.Int))));
 
 			// Act
-			var (response, _, done) = await host.SendAsync(HttpMethod.Get, "/");
+			var (response, _, done) = await host.SendAsync(Method.Get, "/");
 
 			// Assert
 			Assert.Equal(500, (int)response.StatusCode);

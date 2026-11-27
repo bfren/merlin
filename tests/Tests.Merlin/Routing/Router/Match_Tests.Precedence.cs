@@ -1,6 +1,8 @@
 // Merlin: Unit Tests
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
+using Merlin.Domain;
+
 namespace Merlin.Routing.Router_Tests;
 
 public partial class Match_Tests
@@ -18,8 +20,8 @@ public partial class Match_Tests
 			router.Map("/posts/latest").Get(literal);
 
 			// Act
-			var latest = router.Match("GET", "/posts/latest");
-			var other = router.Match("GET", "/posts/other");
+			var latest = router.Match(Method.Get, "/posts/latest");
+			var other = router.Match(Method.Get, "/posts/other");
 
 			// Assert
 			Assert.Same(literal, Assert.IsType<Matched>(latest).Handler);
@@ -37,8 +39,8 @@ public partial class Match_Tests
 			router.Map("/posts/{id:int}").Get(typed);
 
 			// Act
-			var number = router.Match("GET", "/posts/42");
-			var text = router.Match("GET", "/posts/hello");
+			var number = router.Match(Method.Get, "/posts/42");
+			var text = router.Match(Method.Get, "/posts/hello");
 
 			// Assert
 			var n = Assert.IsType<Matched>(number);
@@ -60,8 +62,8 @@ public partial class Match_Tests
 			router.Map("/files/readme").Get(literal);
 
 			// Act
-			var readme = router.Match("GET", "/files/readme");
-			var other = router.Match("GET", "/files/other");
+			var readme = router.Match(Method.Get, "/files/readme");
+			var other = router.Match(Method.Get, "/files/other");
 
 			// Assert
 			Assert.Same(literal, Assert.IsType<Matched>(readme).Handler);
@@ -79,7 +81,7 @@ public partial class Match_Tests
 			router.Map("/a/{slug}/y").Get(param);
 
 			// Act
-			var result = router.Match("GET", "/a/latest/y");
+			var result = router.Match(Method.Get, "/a/latest/y");
 
 			// Assert
 			var matched = Assert.IsType<Matched>(result);
@@ -97,7 +99,7 @@ public partial class Match_Tests
 			router.Map("/files/{path:*}").Get(catchAll);
 
 			// Act
-			var result = router.Match("GET", "/files/42/download");
+			var result = router.Match(Method.Get, "/files/42/download");
 
 			// Assert
 			var matched = Assert.IsType<Matched>(result);
@@ -127,7 +129,7 @@ public partial class Match_Tests
 			}
 
 			// Act
-			var result = router.Match("GET", "/x/42");
+			var result = router.Match(Method.Get, "/x/42");
 
 			// Assert
 			var matched = Assert.IsType<Matched>(result);
@@ -150,8 +152,8 @@ public partial class Match_Tests
 			second.Map("/posts/latest").Get(literalB);
 
 			// Act
-			var a = first.Match("GET", "/posts/latest");
-			var b = second.Match("GET", "/posts/latest");
+			var a = first.Match(Method.Get, "/posts/latest");
+			var b = second.Match(Method.Get, "/posts/latest");
 
 			// Assert
 			Assert.Same(literalA, Assert.IsType<Matched>(a).Handler);

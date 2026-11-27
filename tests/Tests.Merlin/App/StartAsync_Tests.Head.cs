@@ -1,6 +1,7 @@
 // Merlin: Unit Tests
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
+using Merlin.Domain;
 using Merlin.Replies;
 
 namespace Merlin.App_Tests;
@@ -16,7 +17,7 @@ public partial class StartAsync_Tests
 			await using var host = await TestHost.StartAsync(r => r.Map("/").Get(_ => Reply.Text(Rnd.Str)));
 
 			// Act
-			var (response, _, done) = await host.SendAsync(HttpMethod.Head, "/");
+			var (response, _, done) = await host.SendAsync(Method.Head, "/");
 
 			// Assert
 			Assert.Equal(200, (int)response.StatusCode);
@@ -31,7 +32,7 @@ public partial class StartAsync_Tests
 			await using var host = await TestHost.StartAsync(r => r.Map("/").Head(_ => Reply.Text(Rnd.Str)));
 
 			// Act
-			var (response, _, done) = await host.SendAsync(HttpMethod.Head, "/");
+			var (response, _, done) = await host.SendAsync(Method.Head, "/");
 
 			// Assert
 			Assert.Equal(200, (int)response.StatusCode);
@@ -45,7 +46,7 @@ public partial class StartAsync_Tests
 			await using var host = await TestHost.StartAsync(r => r.Map("/").Get(_ => Reply.Text(Rnd.Str)));
 
 			// Act
-			var (response, _, done) = await host.SendAsync(HttpMethod.Head, $"/{Rnd.Str}");
+			var (response, _, done) = await host.SendAsync(Method.Head, $"/{Rnd.Str}");
 
 			// Assert
 			Assert.Equal(404, (int)response.StatusCode);

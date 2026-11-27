@@ -2,6 +2,7 @@
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
 using System.Text.Json;
+using Merlin.Domain;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Wrap;
@@ -21,7 +22,7 @@ public partial class StartAsync_Tests
 			await using var host = await TestHost.StartAsync(r => r.Map("/").Get(_ => R.Fail(message)));
 
 			// Act
-			_ = await host.SendAsync(HttpMethod.Get, "/");
+			_ = await host.SendAsync(Method.Get, "/");
 
 			// Assert
 			Assert.Contains(host.Logs, l => l.Level == LogLevel.Error && l.Message == message);
@@ -37,7 +38,7 @@ public partial class StartAsync_Tests
 			await using var host = await TestHost.StartAsync(r => r.Map("/").Get(_ => R.Fail(Rnd.Str).WithKind(KindOf(kind))));
 
 			// Act
-			var (response, body, done) = await host.SendAsync(HttpMethod.Get, "/");
+			var (response, body, done) = await host.SendAsync(Method.Get, "/");
 
 			// Assert
 			Assert.Equal(expected, (int)response.StatusCode);
@@ -54,7 +55,7 @@ public partial class StartAsync_Tests
 			await using var host = await TestHost.StartAsync(r => r.Map("/").Get(_ => R.Fail(message).WithKind(FailureKind.Invalid)));
 
 			// Act
-			var (_, body, _) = await host.SendAsync(HttpMethod.Get, "/");
+			var (_, body, _) = await host.SendAsync(Method.Get, "/");
 
 			// Assert
 			Assert.Equal(message, JsonElement.Parse(body).GetProperty("detail").GetString());
@@ -68,7 +69,7 @@ public partial class StartAsync_Tests
 			await using var host = await TestHost.StartAsync(r => r.Map("/").Get(_ => R.Fail(message)));
 
 			// Act
-			var (_, body, _) = await host.SendAsync(HttpMethod.Get, "/");
+			var (_, body, _) = await host.SendAsync(Method.Get, "/");
 
 			// Assert
 			Assert.DoesNotContain(message, body);
@@ -87,7 +88,7 @@ public partial class StartAsync_Tests
 			}));
 
 			// Act
-			var (response, body, done) = await host.SendAsync(HttpMethod.Get, "/");
+			var (response, body, done) = await host.SendAsync(Method.Get, "/");
 
 			// Assert
 			Assert.Equal(200, (int)response.StatusCode);

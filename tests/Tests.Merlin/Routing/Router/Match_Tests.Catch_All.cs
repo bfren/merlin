@@ -1,6 +1,8 @@
 // Merlin: Unit Tests
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
+using Merlin.Domain;
+
 namespace Merlin.Routing.Router_Tests;
 
 public partial class Match_Tests
@@ -16,7 +18,7 @@ public partial class Match_Tests
 			router.Map("/files/{path:*}").Get(handler);
 
 			// Act
-			var result = router.Match("GET", "/files/docs/2026/report.pdf");
+			var result = router.Match(Method.Get, "/files/docs/2026/report.pdf");
 
 			// Assert
 			var matched = Assert.IsType<Matched>(result);
@@ -32,7 +34,7 @@ public partial class Match_Tests
 			router.Map("/files/{path:*}").Get(NewHandler());
 
 			// Act
-			var result = router.Match("GET", "/files/readme.txt");
+			var result = router.Match(Method.Get, "/files/readme.txt");
 
 			// Assert
 			var matched = Assert.IsType<Matched>(result);
@@ -47,7 +49,7 @@ public partial class Match_Tests
 			router.Map("/files/{path:*}").Get(NewHandler());
 
 			// Act
-			var result = router.Match("GET", "/files/..%2F..%2Fsecret");
+			var result = router.Match(Method.Get, "/files/..%2F..%2Fsecret");
 
 			// Assert
 			var matched = Assert.IsType<Matched>(result);
@@ -62,7 +64,7 @@ public partial class Match_Tests
 			router.Map("/files/{path:*}").Get(NewHandler());
 
 			// Act
-			var result = router.Match("GET", "/files");
+			var result = router.Match(Method.Get, "/files");
 
 			// Assert
 			Assert.IsType<NotFound>(result);
@@ -78,7 +80,7 @@ public partial class Match_Tests
 			router.Map("/{path:*}").Get(NewHandler());
 
 			// Act
-			var result = router.Match("GET", path);
+			var result = router.Match(Method.Get, path);
 
 			// Assert
 			Assert.IsType<NotFound>(result);
@@ -94,7 +96,7 @@ public partial class Match_Tests
 			router.Map("/{path:*}").Get(handler);
 
 			// Act
-			var result = router.Match("GET", $"/{first}/{second}");
+			var result = router.Match(Method.Get, $"/{first}/{second}");
 
 			// Assert
 			var matched = Assert.IsType<Matched>(result);
@@ -112,7 +114,7 @@ public partial class Match_Tests
 			router.Map("/{path:*}").Get(NewHandler());
 
 			// Act
-			var result = router.Match("GET", "/");
+			var result = router.Match(Method.Get, "/");
 
 			// Assert
 			var matched = Assert.IsType<Matched>(result);

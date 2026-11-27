@@ -1,6 +1,8 @@
 // Merlin: Unit Tests
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
+using Merlin.Domain;
+
 namespace Merlin.Routing.Router_Tests;
 
 public partial class Match_Tests
@@ -17,7 +19,7 @@ public partial class Match_Tests
 			router.Map("/hello/{name}").Get(handler);
 
 			// Act
-			var result = router.Match("GET", $"/hello/{name}");
+			var result = router.Match(Method.Get, $"/hello/{name}");
 
 			// Assert
 			var matched = Assert.IsType<Matched>(result);
@@ -36,7 +38,7 @@ public partial class Match_Tests
 			router.Map("/hello/{name}").Get(NewHandler());
 
 			// Act
-			var result = router.Match("GET", $"/hello/{name}");
+			var result = router.Match(Method.Get, $"/hello/{name}");
 
 			// Assert
 			var matched = Assert.IsType<Matched>(result);
@@ -52,7 +54,7 @@ public partial class Match_Tests
 			router.Map("/posts/{id:int}").Get(NewHandler());
 
 			// Act
-			var result = router.Match("GET", $"/posts/{id}");
+			var result = router.Match(Method.Get, $"/posts/{id}");
 
 			// Assert
 			var matched = Assert.IsType<Matched>(result);
@@ -67,7 +69,7 @@ public partial class Match_Tests
 			router.Map("/archive/{year:int}/{draft:bool}").Get(NewHandler());
 
 			// Act
-			var result = router.Match("GET", "/archive/2026/true");
+			var result = router.Match(Method.Get, "/archive/2026/true");
 
 			// Assert
 			var matched = Assert.IsType<Matched>(result);
@@ -83,7 +85,7 @@ public partial class Match_Tests
 			router.Map("/posts/{id:int}").Get(NewHandler());
 
 			// Act
-			var result = router.Match("GET", "/posts/abc");
+			var result = router.Match(Method.Get, "/posts/abc");
 
 			// Assert
 			Assert.IsType<NotFound>(result);
@@ -102,7 +104,7 @@ public partial class Match_Tests
 			router.Map("/hello/{name}").Get(NewHandler());
 
 			// Act
-			var result = router.Match("GET", path);
+			var result = router.Match(Method.Get, path);
 
 			// Assert
 			var matched = Assert.IsType<Matched>(result);
@@ -117,7 +119,7 @@ public partial class Match_Tests
 			router.Map("/a/{x}/{y}").Get(NewHandler());
 
 			// Act
-			var result = router.Match("GET", "/a/b%2Fc");
+			var result = router.Match(Method.Get, "/a/b%2Fc");
 
 			// Assert
 			Assert.IsType<NotFound>(result);

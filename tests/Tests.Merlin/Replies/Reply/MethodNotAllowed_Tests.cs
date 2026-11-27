@@ -1,6 +1,7 @@
 // Merlin: Unit Tests
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
+using Merlin.Domain;
 using Microsoft.AspNetCore.Http;
 using Wrap.Testing;
 using static Merlin.Replies.Helpers;
@@ -15,7 +16,7 @@ public class MethodNotAllowed_Tests
 		// Arrange
 
 		// Act
-		var result = Reply.MethodNotAllowed(["GET"]);
+		var result = Reply.MethodNotAllowed([Method.Get]);
 
 		// Assert
 		Assert.Equal(StatusCodes.Status405MethodNotAllowed, result.AssertOk().StatusCode);
@@ -27,7 +28,7 @@ public class MethodNotAllowed_Tests
 		// Arrange
 
 		// Act
-		var result = Reply.MethodNotAllowed(["GET", "PUT"]);
+		var result = Reply.MethodNotAllowed([Method.Get, Method.Put]);
 
 		// Assert
 		Assert.Equal("GET, PUT", result.AssertOk().Headers["Allow"]);
@@ -37,7 +38,7 @@ public class MethodNotAllowed_Tests
 	public async Task Writes_Allow_Header()
 	{
 		// Arrange
-		var reply = Reply.MethodNotAllowed(["GET", "PUT"]).AssertOk();
+		var reply = Reply.MethodNotAllowed([Method.Get, Method.Put]).AssertOk();
 
 		// Act
 		var (_, response, _) = await WriteAsync(reply);
