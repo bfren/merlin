@@ -4,6 +4,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using System.Threading.Tasks;
+using Merlin.Domain;
 using Merlin.Extensions;
 using Merlin.Replies;
 using Merlin.Routing;
@@ -73,8 +74,10 @@ public sealed class App
 
 	private async Task Adapter(HttpContext ctx, ILogger logger)
 	{
-		// match
-		var reply = Router.Match(ctx.Request.Method, ctx.Request.Path.Value ?? "/") switch
+		// use Router to match request against registered routes
+		var method = Method.Wrap(ctx.Request.Method);
+		var path = ctx.Request.Path.Value ?? "/";
+		var reply = Router.Match(method, path) switch
 		{
 			Matched m =>
 				await m.Handler(new(ctx, m.Values, Json)),

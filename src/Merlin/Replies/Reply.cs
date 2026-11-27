@@ -7,6 +7,7 @@ using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Merlin.Domain;
 using Microsoft.AspNetCore.Http;
 using Wrap;
 
@@ -104,7 +105,7 @@ public abstract record class Reply
 	/// </summary>
 	/// <param name="allowed">Methods allowed for the path.</param>
 	/// <returns>A 405 reply.</returns>
-	public static Result<Reply> MethodNotAllowed(ImmutableArray<string> allowed) =>
+	public static Result<Reply> MethodNotAllowed(ImmutableArray<Method> allowed) =>
 		throw new NotImplementedException();
 
 	/// <summary>

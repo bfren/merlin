@@ -3,8 +3,8 @@
 
 using System;
 using System.Threading.Tasks;
+using Merlin.Domain;
 using Merlin.Replies;
-using Microsoft.AspNetCore.Http;
 using Wrap;
 
 namespace Merlin.Routing;
@@ -27,7 +27,7 @@ public sealed class RouteBuilder(Router router, Template template)
 	/// <param name="h">Asynchronous request handler.</param>
 	/// <returns>This builder, to add more methods.</returns>
 	public RouteBuilder Get(Handler h) =>
-		On(HttpMethods.Get, h);
+		On(Method.Get, h);
 
 	/// <summary>
 	/// Handle GET requests to this route with a synchronous handler.
@@ -43,7 +43,7 @@ public sealed class RouteBuilder(Router router, Template template)
 	/// <param name="h">Asynchronous request handler.</param>
 	/// <returns>This builder, to add more methods.</returns>
 	public RouteBuilder Head(Handler h) =>
-		On(HttpMethods.Head, h);
+		On(Method.Head, h);
 
 	/// <summary>
 	/// Handle HEAD requests to this route with a synchronous handler.
@@ -59,7 +59,7 @@ public sealed class RouteBuilder(Router router, Template template)
 	/// <param name="h">Asynchronous request handler.</param>
 	/// <returns>This builder, to add more methods.</returns>
 	public RouteBuilder Post(Handler h) =>
-		On(HttpMethods.Post, h);
+		On(Method.Post, h);
 
 	/// <summary>
 	/// Handle POST requests to this route with a synchronous handler.
@@ -75,7 +75,7 @@ public sealed class RouteBuilder(Router router, Template template)
 	/// <param name="h">Asynchronous request handler.</param>
 	/// <returns>This builder, to add more methods.</returns>
 	public RouteBuilder Put(Handler h) =>
-		On(HttpMethods.Put, h);
+		On(Method.Put, h);
 
 	/// <summary>
 	/// Handle PUT requests to this route with a synchronous handler.
@@ -91,7 +91,7 @@ public sealed class RouteBuilder(Router router, Template template)
 	/// <param name="h">Asynchronous request handler.</param>
 	/// <returns>This builder, to add more methods.</returns>
 	public RouteBuilder Patch(Handler h) =>
-		On(HttpMethods.Patch, h);
+		On(Method.Patch, h);
 
 	/// <summary>
 	/// Handle PATCH requests to this route with a synchronous handler.
@@ -107,7 +107,7 @@ public sealed class RouteBuilder(Router router, Template template)
 	/// <param name="h">Asynchronous request handler.</param>
 	/// <returns>This builder, to add more methods.</returns>
 	public RouteBuilder Delete(Handler h) =>
-		On(HttpMethods.Delete, h);
+		On(Method.Delete, h);
 
 	/// <summary>
 	/// Handle DELETE requests to this route with a synchronous handler.
@@ -123,7 +123,7 @@ public sealed class RouteBuilder(Router router, Template template)
 	/// <param name="method">HTTP method.</param>
 	/// <param name="h">Request handler.</param>
 	/// <returns>This builder, to add more methods.</returns>
-	private RouteBuilder On(string method, Handler h)
+	private RouteBuilder On(Method method, Handler h)
 	{
 		router.Add(method, template, h);
 		return this;
