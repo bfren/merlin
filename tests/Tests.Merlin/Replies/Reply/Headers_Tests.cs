@@ -1,6 +1,8 @@
 // Merlin: Unit Tests
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
+using Merlin.Domain;
+
 namespace Merlin.Replies.Reply_Tests;
 
 public class Headers_Tests
@@ -55,10 +57,10 @@ public class Headers_Tests
 		var original = new TextReply(Rnd.Str);
 
 		// Act
-		var copy = original with { StatusCode = 201 };
+		var copy = original with { Status = Status.Created };
 
 		// Assert
 		Assert.Equal(original.Headers, copy.Headers);
-		Assert.Equal(200, original.StatusCode);
+		Assert.Equal(Status.Ok, original.Status);
 	}
 }

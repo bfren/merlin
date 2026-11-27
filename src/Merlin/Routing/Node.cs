@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using Merlin.Domain;
 
 namespace Merlin.Routing;
 

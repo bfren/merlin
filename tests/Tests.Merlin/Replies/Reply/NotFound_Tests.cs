@@ -1,6 +1,7 @@
 // Merlin: Unit Tests
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
+using Merlin.Domain;
 using Microsoft.AspNetCore.Http;
 using Wrap.Testing;
 
@@ -17,6 +18,6 @@ public class NotFound_Tests
 		var result = Reply.NotFound();
 
 		// Assert
-		Assert.Equal(StatusCodes.Status404NotFound, result.AssertOk().StatusCode);
+		Assert.Equal(Status.NotFound, result.AssertOk().Status);
 	}
 }

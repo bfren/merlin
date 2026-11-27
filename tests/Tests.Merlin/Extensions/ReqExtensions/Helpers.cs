@@ -1,8 +1,8 @@
 // Merlin: Unit Tests
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
-using System.Collections.Immutable;
 using System.Text.Json;
+using Merlin.Domain;
 using Microsoft.AspNetCore.Http;
 using Wrap;
 
@@ -13,11 +13,11 @@ internal static class Helpers
 	/// <summary>
 	/// Build a request with the given route values and query string (e.g. <c>?a=1</c>).
 	/// </summary>
-	public static Req NewReq(ImmutableDictionary<string, object>? routeValues = null, string query = "")
+	public static Req NewReq(RouteValuesDictionary? routeValues = null, string query = "")
 	{
 		var http = new DefaultHttpContext();
 		http.Request.QueryString = new(query);
-		return new(http, routeValues ?? [], new JsonSerializerOptions());
+		return new(http, routeValues ?? RouteValuesDictionary.Empty, new JsonSerializerOptions());
 	}
 
 	/// <summary>
@@ -33,7 +33,7 @@ internal static class Helpers
 		http.Request.ContentLength = bytes.Length;
 		return new(
 			http,
-			[],
+			RouteValuesDictionary.Empty,
 			options ?? new JsonSerializerOptions { TypeInfoResolver = BinderJson.Default }
 		);
 	}

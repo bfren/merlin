@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using Merlin.Domain;
 using Wrap;
@@ -212,13 +211,7 @@ public sealed class Router
 	/// <param name="parts">Request path segments.</param>
 	/// <returns>The route's handler and captured values, or null if no route matches.</returns>
 	private Maybe<Matched> Find(Method method, string[] parts) =>
-		tries.TryGetValue(method, out var root) ? Walk(root, parts, 0, NoValues) : M.None;
-
-	/// <summary>
-	/// Empty route values, with names compared ignoring case.
-	/// </summary>
-	private static readonly ImmutableDictionary<string, object> NoValues =
-		ImmutableDictionary.Create<string, object>(StringComparer.OrdinalIgnoreCase);
+		tries.TryGetValue(method, out var root) ? Walk(root, parts, 0, RouteValuesDictionary.Empty) : M.None;
 
 	/// <summary>
 	/// Walk the trie from a node, trying literal, then params in priority order, then catch-all,
@@ -229,12 +222,7 @@ public sealed class Router
 	/// <param name="i">Index of the segment to match at this node.</param>
 	/// <param name="values">Values captured so far (immutable, so backtracking discards a branch's values for free).</param>
 	/// <returns>The route's handler and captured values, or null if no route matches.</returns>
-	private static Maybe<Matched> Walk(
-		Node node,
-		string[] parts,
-		int i,
-		ImmutableDictionary<string, object> values
-	)
+	private static Maybe<Matched> Walk(Node node, string[] parts, int i, RouteValuesDictionary values)
 	{
 		// the whole path is used: a route ends here or this branch is a dead end
 		if (i == parts.Length)

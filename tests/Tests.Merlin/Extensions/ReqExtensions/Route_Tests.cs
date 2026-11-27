@@ -1,7 +1,7 @@
 // Merlin: Unit Tests
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
-using System.Collections.Immutable;
+using Merlin.Domain;
 using Wrap.Testing;
 using static Merlin.Extensions.ReqExtensions_Tests.Helpers;
 
@@ -18,7 +18,7 @@ public class Route_Tests
 		{
 			// Arrange
 			var value = Rnd.Int;
-			var req = NewReq(ImmutableDictionary<string, object>.Empty.Add("id", value));
+			var req = NewReq(RouteValuesDictionary.Empty.Add("id", value));
 
 			// Act
 			var result = req.Route<int>("id");
@@ -32,7 +32,7 @@ public class Route_Tests
 		{
 			// Arrange
 			var value = Rnd.Str;
-			var req = NewReq(ImmutableDictionary<string, object>.Empty.Add("slug", value));
+			var req = NewReq(RouteValuesDictionary.Empty.Add("slug", value));
 
 			// Act
 			var result = req.Route<string>("slug");
@@ -46,7 +46,7 @@ public class Route_Tests
 		{
 			// Arrange
 			var value = Guid.NewGuid();
-			var req = NewReq(ImmutableDictionary<string, object>.Empty.Add("id", value));
+			var req = NewReq(RouteValuesDictionary.Empty.Add("id", value));
 
 			// Act
 			var result = req.Route<object>("id");
@@ -61,7 +61,7 @@ public class Route_Tests
 			// Arrange
 			var year = Rnd.Int;
 			var slug = Rnd.Str;
-			var req = NewReq(ImmutableDictionary<string, object>.Empty.Add("year", year).Add("slug", slug));
+			var req = NewReq(RouteValuesDictionary.Empty.Add("year", year).Add("slug", slug));
 
 			// Act
 			var result = req.Route<string>("slug");
@@ -91,7 +91,7 @@ public class Route_Tests
 		public void Wrong_Type_Returns_Failure()
 		{
 			// Arrange
-			var req = NewReq(ImmutableDictionary<string, object>.Empty.Add("id", Rnd.Int));
+			var req = NewReq(RouteValuesDictionary.Empty.Add("id", Rnd.Int));
 
 			// Act
 			var result = req.Route<long>("id");
@@ -104,7 +104,7 @@ public class Route_Tests
 		public void Does_Not_Convert_To_String()
 		{
 			// Arrange
-			var req = NewReq(ImmutableDictionary<string, object>.Empty.Add("id", Rnd.Int));
+			var req = NewReq(RouteValuesDictionary.Empty.Add("id", Rnd.Int));
 
 			// Act
 			var result = req.Route<string>("id");
@@ -144,7 +144,7 @@ public class Route_Tests
 		public void Wrong_Type_Has_Kind_Unexpected()
 		{
 			// Arrange
-			var req = NewReq(ImmutableDictionary<string, object>.Empty.Add("id", Rnd.Int));
+			var req = NewReq(RouteValuesDictionary.Empty.Add("id", Rnd.Int));
 
 			// Act
 			var result = req.Route<long>("id");

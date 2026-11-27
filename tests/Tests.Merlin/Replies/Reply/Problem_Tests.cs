@@ -41,7 +41,7 @@ public class Problem_Tests
 			var result = Reply.Problem(problem);
 
 			// Assert
-			Assert.Equal(status, result.AssertOk().StatusCode);
+			Assert.Equal(status, result.AssertOk().Status.Value);
 		}
 
 		[Fact]

@@ -55,7 +55,7 @@ public class Error_Tests
 			var result = Reply.Error(failure);
 
 			// Assert
-			Assert.Equal(expected, result.AssertOk().StatusCode);
+			Assert.Equal(expected, result.AssertOk().Status.Value);
 		}
 
 		[Fact]
@@ -68,7 +68,7 @@ public class Error_Tests
 			var result = Reply.Error(failure);
 
 			// Assert
-			Assert.Equal(StatusCodes.Status500InternalServerError, result.AssertOk().StatusCode);
+			Assert.Equal(Domain.Status.InternalServerError, result.AssertOk().Status);
 		}
 
 		[Fact]
@@ -81,7 +81,7 @@ public class Error_Tests
 			var result = Reply.Error(failure);
 
 			// Assert
-			Assert.Equal(StatusCodes.Status500InternalServerError, result.AssertOk().StatusCode);
+			Assert.Equal(Domain.Status.InternalServerError, result.AssertOk().Status);
 		}
 
 		[Theory]
@@ -96,7 +96,7 @@ public class Error_Tests
 			var result = Reply.Error(failure);
 
 			// Assert
-			Assert.Equal(expected, result.AssertOk().StatusCode);
+			Assert.Equal(expected, result.AssertOk().Status.Value);
 		}
 
 		[Fact]

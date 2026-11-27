@@ -1,9 +1,9 @@
 // Merlin: .NET HTTP Server.
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
-using System.Collections.Immutable;
 using System.Text.Json;
 using System.Threading;
+using Merlin.Domain;
 using Microsoft.AspNetCore.Http;
 
 namespace Merlin;
@@ -17,7 +17,7 @@ namespace Merlin;
 /// <param name="JsonOptions">JSON options used by the JSON and form binders.</param>
 public sealed record class Req(
 	HttpContext Http,
-	ImmutableDictionary<string, object> RouteValues,
+	RouteValuesDictionary RouteValues,
 	JsonSerializerOptions JsonOptions
 )
 {

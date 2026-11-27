@@ -28,7 +28,7 @@ public class WriteAsync_Tests
 		public async Task Writes_Status_Set_With_With()
 		{
 			// Arrange
-			var reply = new TextReply(Rnd.Str) with { StatusCode = StatusCodes.Status201Created };
+			var reply = new TextReply(Rnd.Str) with { Status = Domain.Status.Created };
 
 			// Act
 			var (_, response, _) = await WriteAsync(reply);
@@ -129,7 +129,7 @@ public class WriteAsync_Tests
 			var body = new MemoryStream();
 			body.Dispose();
 			response.Body = body;
-			var reply = new TextReply(Rnd.Str) with { StatusCode = StatusCodes.Status202Accepted };
+			var reply = new TextReply(Rnd.Str) with { Status = Domain.Status.Accepted };
 
 			// Act
 			await reply.WriteAsync(response, Json, TestContext.Current.CancellationToken);

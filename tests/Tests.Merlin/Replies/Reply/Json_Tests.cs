@@ -1,6 +1,7 @@
 // Merlin: Unit Tests
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
+using Merlin.Domain;
 using Wrap.Testing;
 
 namespace Merlin.Replies.Reply_Tests;
@@ -19,7 +20,7 @@ public class Json_Tests
 		// Assert
 		var reply = Assert.IsType<JsonReply<TestDto>>(result.AssertOk());
 		Assert.Same(content, reply.Content);
-		Assert.Equal(200, reply.StatusCode);
+		Assert.Equal(Status.Ok, reply.Status);
 	}
 
 	[Fact]

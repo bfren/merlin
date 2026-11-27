@@ -19,7 +19,7 @@ public class MethodNotAllowed_Tests
 		var result = Reply.MethodNotAllowed([Method.Get]);
 
 		// Assert
-		Assert.Equal(StatusCodes.Status405MethodNotAllowed, result.AssertOk().StatusCode);
+		Assert.Equal(Status.MethodNotAllowed, result.AssertOk().Status);
 	}
 
 	[Fact]

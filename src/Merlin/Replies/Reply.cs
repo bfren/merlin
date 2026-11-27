@@ -21,8 +21,8 @@ public abstract record class Reply
 	/// <summary>
 	/// HTTP status code (default 200 OK).
 	/// </summary>
-	public int StatusCode { get; init; } =
-		StatusCodes.Status200OK;
+	public Status Status { get; init; } =
+		Status.Ok;
 
 	/// <summary>
 	/// Response headers - each is set (not appended) on the response, so every name appears once.
@@ -65,7 +65,7 @@ public abstract record class Reply
 	/// <param name="response">HTTP response.</param>
 	protected virtual void SetHeaders(HttpResponse response)
 	{
-		response.StatusCode = StatusCode;
+		response.StatusCode = Status.Value;
 		foreach (var item in Headers)
 		{
 			response.Headers[item.Key] = item.Value;
@@ -126,7 +126,7 @@ public abstract record class Reply
 		return reply with
 		{
 			Headers = reply.Headers.SetItem("Content-Type", "application/problem+json"),
-			StatusCode = problem.Status
+			Status = Status.Wrap(problem.Status)
 		};
 	}
 

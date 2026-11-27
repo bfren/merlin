@@ -71,7 +71,7 @@ public partial class StartAsync_Tests
 			// Arrange
 			await using var host = await TestHost.StartAsync(r => r.Map("/").Get(_ =>
 				from reply in Reply.Text(Rnd.Str)
-				select reply with { StatusCode = 201 }
+				select reply with { Status = Status.Created }
 			));
 
 			// Act
