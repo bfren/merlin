@@ -22,14 +22,24 @@ static HandlerAsync SayHello(ISpeak speak) =>
 		   from reply in Reply.Text(text)
 		   select reply;
 
+static Result<Reply> CalculateAgeInDays(Req req) =>
+	from dob in req.Route<DateTimeOffset>("dob")
+	from age in R.Try(() => (DateTime.Now.Date - dob.Date).Days)
+	from text in R.Try(() => $"You are {age} days old.")
+	from reply in Reply.Text(text)
+	select reply;
+
 app.Router
 	.Map("/")
 		.Get(Home)
 	.Map("/hello/{name}")
 		.Get(sp => SayHello(sp.GetRequiredService<ISpeak>()))
 		.Post(req => from name in req.Route<string>("name")
-					 from json in Reply.Json(new Greeting(name))
-					 select json)
+					 from json in R.Wrap(new Greeting(name))
+					 from reply in Reply.Json(json)
+					 select reply)
+	.Map("/age/{dob:datetime}")
+		.Get(CalculateAgeInDays);
 ;
 
 await app.StartAsync();

@@ -82,6 +82,8 @@ public class Parse_Tests
 		[InlineData("guid", typeof(Guid))]
 		[InlineData("bool", typeof(bool))]
 		[InlineData("dateonly", typeof(DateOnly))]
+		[InlineData("timeonly", typeof(TimeOnly))]
+		[InlineData("datetime", typeof(DateTimeOffset))]
 		[InlineData("string", typeof(string))]
 		[InlineData("INT", typeof(int))]
 		public void Typed_Param_Uses_Param_Type(string type, Type expected)

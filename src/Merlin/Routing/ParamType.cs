@@ -25,7 +25,7 @@ public delegate bool TryParseValue(string input, [NotNullWhen(true)] out object?
 public sealed record class ParamType(string Name, Type Type, int Priority, TryParseValue TryParse)
 {
 	/// <summary>
-	/// Create a param type from any <see cref="IParsable{TSelf}"/> type, parsing with the default culture.
+	/// Create a param type from any <see cref="IParsable{TSelf}"/> type, parsing with Wrap's <c>F.DefaultCulture</c>.
 	/// </summary>
 	/// <typeparam name="T">Value type.</typeparam>
 	/// <param name="name">Name used in route templates.</param>

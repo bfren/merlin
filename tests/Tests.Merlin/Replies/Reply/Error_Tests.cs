@@ -1,6 +1,7 @@
 // Merlin: Unit Tests
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
+using System.Globalization;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Wrap;
@@ -168,6 +169,31 @@ public class Error_Tests
 
 			// Assert
 			Assert.Equal($"Value {name} is not {number}.", result.GetProperty("detail").GetString());
+		}
+
+		[Fact]
+		public async Task Client_Error_Detail_Formats_Args_With_Default_Culture()
+		{
+			// Arrange
+			var value = 1234.5; // a decimal point, which de-DE writes as a comma
+			var failure = R.Fail("Value {Number} is too big.", value).WithKind(FailureKind.Invalid);
+			var server = CultureInfo.CurrentCulture;
+			CultureInfo.CurrentCulture = new("de-DE");
+			Assert.NotEqual(value.ToString(F.DefaultCulture), value.ToString(CultureInfo.CurrentCulture));
+
+			// Act
+			JsonElement result;
+			try
+			{
+				result = await ProblemAsync(failure);
+			}
+			finally
+			{
+				CultureInfo.CurrentCulture = server;
+			}
+
+			// Assert
+			Assert.Equal($"Value {value.ToString(F.DefaultCulture)} is too big.", result.GetProperty("detail").GetString());
 		}
 
 		[Theory]

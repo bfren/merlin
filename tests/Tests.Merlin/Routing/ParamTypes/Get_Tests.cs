@@ -11,6 +11,8 @@ public class Get_Tests
 	[InlineData("guid", typeof(Guid), 10)]
 	[InlineData("bool", typeof(bool), 10)]
 	[InlineData("dateonly", typeof(DateOnly), 10)]
+	[InlineData("timeonly", typeof(TimeOnly), 10)]
+	[InlineData("datetime", typeof(DateTimeOffset), 20)]
 	[InlineData("string", typeof(string), 100)]
 	public void Returns_Built_In_Type(string name, Type type, int priority)
 	{

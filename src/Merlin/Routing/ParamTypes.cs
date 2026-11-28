@@ -3,13 +3,31 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using Wrap;
 
 namespace Merlin.Routing;
 
 /// <summary>
-/// The param types route templates can use: built-in <c>int</c>, <c>long</c>, <c>guid</c>, <c>bool</c>,
-/// <c>dateonly</c> and <c>string</c> (the default for an untyped <c>{name}</c>), plus any that are added.
+/// The param types route templates can use, e.g. <c>int</c> in <c>{id:int}</c>.
 /// </summary>
+/// <remarks>
+/// <para>
+/// Built in: <c>int</c>, <c>guid</c>, <c>bool</c>, <c>dateonly</c> and <c>timeonly</c> (priority 10), <c>long</c> and
+/// <c>datetime</c> (20), and <c>string</c> (100), which an untyped <c>{name}</c> uses. Names ignore case. Values parse with
+/// Wrap's <c>F.DefaultCulture</c> (en-GB unless changed).
+/// </para>
+/// <para>
+/// <c>datetime</c> is a <see cref="DateTimeOffset"/>: an offset is kept as sent, and a value without one is UTC, not the
+/// server's time zone. Any form <see cref="DateTimeOffset"/> can parse is accepted, so a plain date is midnight UTC (a
+/// sibling <c>dateonly</c> is tried first), and a time on its own is that time today.
+/// </para>
+/// <para>
+/// Priority only matters between sibling parameters: routes with a parameter in the same position, under the same path,
+/// for the same method.
+/// </para>
+/// </remarks>
 public sealed class ParamTypes
 {
 	private readonly Dictionary<string, ParamType> types = new(StringComparer.OrdinalIgnoreCase)
@@ -19,6 +37,13 @@ public sealed class ParamTypes
 		["guid"] = ParamType.Create<Guid>("guid", 10),
 		["bool"] = ParamType.Create<bool>("bool", 10),
 		["dateonly"] = ParamType.Create<DateOnly>("dateonly", 10),
+		["timeonly"] = ParamType.Create<TimeOnly>("timeonly", 10),
+		["datetime"] = new("datetime", typeof(DateTimeOffset), 20, static (s, [NotNullWhen(true)] out v) =>
+		{
+			var ok = DateTimeOffset.TryParse(s, F.DefaultCulture, DateTimeStyles.AssumeUniversal, out var d);
+			v = ok ? d : null;
+			return ok;
+		}),
 		["string"] = ParamType.Create<string>("string", 100),   // the default for {name}
 	};
 

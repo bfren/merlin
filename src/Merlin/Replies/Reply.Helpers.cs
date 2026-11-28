@@ -1,6 +1,7 @@
 // Merlin: .NET HTTP Server.
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -19,7 +20,8 @@ public abstract partial record class Reply
 	/// </summary>
 	/// <remarks>
 	/// The status comes from the failure's <see cref="FailureKind"/> (500 for unexpected, unspecified and custom kinds),
-	/// and the title is its standard reason phrase. A 4xx reply has the failure's message, with its args filled in, as <c>detail</c>;
+	/// and the title is its standard reason phrase. A 4xx reply has the failure's message, with its args filled in (formatted with Wrap's
+	/// <c>F.DefaultCulture</c>), as <c>detail</c>;
 	/// a 5xx or cancelled reply has no <c>detail</c>, so internal details are not sent to the client.
 	/// </remarks>
 	/// <param name="failure">Failure.</param>
@@ -115,11 +117,25 @@ public abstract partial record class Reply
 		// Unexpected, Unspecified and custom kinds fall through to 500
 	};
 
-	// Wrap messages are logging templates ("Value {Name} is not {Number}."), filled from Args in order
+	/// <summary>
+	/// Fill a failure message's placeholders from its args, in order. Wrap messages are logging templates
+	/// (<c>"Value {Name} is not {Number}."</c>), so <see cref="string.Format(string, object?[])"/> can't fill them.
+	/// </summary>
+	/// <remarks>
+	/// Args are formatted with Wrap's <c>F.DefaultCulture</c>. A placeholder with no arg left is kept as written.
+	/// </remarks>
+	/// <param name="message">Failure message.</param>
+	/// <param name="args">Failure args.</param>
+	/// <returns>The message with its placeholders filled.</returns>
 	private static string Fill(string message, object?[] args)
 	{
 		var i = 0;
-		return Placeholder().Replace(message, m => i < args.Length ? $"{args[i++]}" : m.Value);
+		return Placeholder().Replace(
+			message,
+			m => i < args.Length
+				? Convert.ToString(args[i++], F.DefaultCulture) ?? string.Empty
+				: m.Value
+		);
 	}
 
 	[GeneratedRegex(@"\{[^{}]+\}")] // source-generated, so AOT-safe

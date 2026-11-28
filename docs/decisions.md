@@ -43,6 +43,10 @@ Broader open questions are listed at the end of `design-notes.md`; where an item
 - **`TestHost.StartAsync` takes an optional `Action<IServiceCollection>`**, run before `map`, so tests can register services.
 
 
+### Culture (settled 2026-11-28)
+
+- **All parsing and formatting uses Wrap's `F.DefaultCulture`** (en-GB unless an app changes it), never `CultureInfo.InvariantCulture` or the server's current culture. This covers route param types (including `datetime`), query values, and the args filled into a 4xx `detail`. Tests: `Reply/Error_Tests.Body.Client_Error_Detail_Formats_Args_With_Default_Culture`, `Router/Match_Tests.Types`.
+
 ## Open: replies
 
 | Question | What the tests assume now | Tests |

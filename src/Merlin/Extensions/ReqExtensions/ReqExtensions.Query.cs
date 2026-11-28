@@ -11,6 +11,9 @@ public static partial class ReqExtensions
 	/// <summary>
 	/// Get a required query string value, parsed as <typeparamref name="T"/>.
 	/// </summary>
+	/// <remarks>
+	/// Values parse with Wrap's <c>F.DefaultCulture</c>. A repeated key (<c>?page=1&amp;page=2</c>) uses the first value.
+	/// </remarks>
 	/// <typeparam name="T">Value type.</typeparam>
 	/// <param name="this">Request.</param>
 	/// <param name="name">Query string key.</param>
@@ -33,7 +36,8 @@ public static partial class ReqExtensions
 	/// Get an optional query string value, parsed as <typeparamref name="T"/>.
 	/// </summary>
 	/// <remarks>
-	/// A value that cannot be parsed is treated the same as a missing value.
+	/// A value that cannot be parsed is treated the same as a missing value. Values parse with Wrap's <c>F.DefaultCulture</c>,
+	/// and a repeated key uses the first value.
 	/// </remarks>
 	/// <typeparam name="T">Value type.</typeparam>
 	/// <param name="this">Request.</param>
