@@ -435,6 +435,91 @@ static Task<Result<Reply>> UpdatePost(Req req) =>
 
 Later binders follow the same pattern: `req.Header<T>`, `req.Cookie`, `req.Claim(...)`.
 
+## Handler dependencies (decided: stage 1; stage 2 later)
+
+Handlers that need several services shouldn't be littered with `sp.GetRequiredService<T>()` calls at route registration. Approach, in two stages:
+
+### Stage 1: endpoint classes (do first; tentative, option 1 below)
+
+Related handlers live in a class whose constructor takes its dependencies. The class is resolved once per request (from the request's scope) and the chosen method handles the request.
+
+```csharp
+public sealed class PostEndpoints(IPostRepo posts, ILogger<PostEndpoints> log)
+{
+    public Task<Result<Reply>> Get(Req req) => ...;
+    public Task<Result<Reply>> Update(Req req) => ...;
+}
+
+builder.Services.AddScoped<PostEndpoints>();
+
+app.Router
+    .Map("/posts/{id:int}")
+        .Get<PostEndpoints>(e => e.Get)
+        .Put<PostEndpoints>(e => e.Update);
+```
+
+Needs:
+
+- No change to `Req`: services never reach handler code.
+- Each route stores a resolver as well as its handler. For `Get<T>`, the resolver is `ctx => select(ctx.RequestServices.GetRequiredService<T>())`. The adapter runs it on the `HttpContext` and calls the returned handler with `Req`. This stays internal to Merlin.
+- A generic overload per method on `RouteBuilder`, e.g. `public RouteBuilder Get<T>(Func<T, Handler> select) where T : notnull`.
+- Endpoint classes registered in DI, scoped by default.
+
+Notes: services are resolved in one place, the adapter. `GetRequiredService<T>` is generic, so it stays AOT-safe. Handlers still take only `Req`.
+
+Open: should `StartAsync` check registrations up front? Without a check, a missing endpoint registration fails on the first request, and failing at startup is a design principle here.
+
+**Options to revisit before the API is settled** (the aim is an API that is usable, elegant and as simple as possible):
+
+- Option 1 (above): resolve per request in the adapter. Tentative.
+- Option 2: close over `IServiceProvider` at registration and resolve at startup, as in "Dependencies" below. Endpoints would need to be singletons, or the app would manage their scopes.
+
+### Stage 2: attribute routes with a source generator (later)
+
+Static methods marked with route attributes; a generator gathers them and emits ordinary calls to the fluent API.
+
+```csharp
+public static partial class PostRoutes
+{
+    [Get("/posts/{id:int}")]
+    public static Task<Result<Reply>> GetPost(int id, IPostRepo posts, Req req) => ...;
+}
+
+// generated
+public static Router MapPostRoutes(this Router router)
+{
+    router.Map("/posts/{id:int}")
+        .Get(req =>
+            from id in req.Route<int>("id")
+            from reply in PostRoutes.GetPost(id, posts, req)      // posts resolved by the adapter, as in stage 1
+            select reply);
+    return router;
+}
+```
+
+Parameter binding rules:
+
+- A parameter whose name matches a template parameter binds to that route value; its type must match the template's type (`{id:int}` → `int`), checked at compile time.
+- A `Req` parameter receives the request.
+- Any other parameter is resolved from the request's services by the adapter, as in stage 1.
+
+Benefits:
+
+- Generated code calls the same fluent API, so `Router` stays the single registry and hand-written routes still work beside generated ones.
+- Templates are parsed and validated at compile time, and the generator reports mismatches as diagnostics.
+- It answers the open question about compile-time typed handlers.
+
+Costs:
+
+- A separate generator project (netstandard2.0, incremental generator) and its tests.
+- Routes are spread across files rather than kept in one route table.
+
+### Open questions
+
+- [ ] Stage 1: resolve endpoint classes per request (scoped), or allow singletons for stateless ones?
+- [ ] Stage 2: should the generator also bind query, JSON and form parameters (e.g. attributes like `[FromQuery]`), or only route values, `Req` and services?
+- [ ] Stage 2: one generated `MapRoutes(Router)` per assembly, or one per class?
+
 ## Dependencies
 
 Handlers get their dependencies by closure, resolved once at startup. `Req` has no service provider, so a handler's dependencies are visible in its signature and tests can pass fakes directly.
@@ -466,6 +551,79 @@ Static files come from Kestrel's middleware or from Caddy, not from Merlin. A ha
 - `FileReply` and `RedirectReply`.
 - Middleware or hooks around handlers (auth, timing); the old `Lifecycle` stubs are deleted until this is designed.
 - `Wrap.Extensions.Logging` as its own package.
+
+## HTML rendering (under consideration)
+
+Merlin needs HTML rendering that is AOT-safe and strongly typed, without the size or full syntax of Razor. The features needed are: echo (with automatic encoding), if, each, partials and layouts.
+
+**Constraint: templates must be compiled, not interpreted.** A runtime Handlebars-style engine resolves `{{user.name}}` by name at runtime. That needs reflection (which AOT trimming breaks) or hand-registered accessors, and typos only surface when a page renders. So every viable option compiles templates to C#.
+
+### Options
+
+| Option | Autocomplete in templates | Errors caught | Cost |
+| --- | --- | --- | --- |
+| 1. RazorSlices (Damian Edwards; NuGet `RazorSlices`, 0.12.x) | Full (existing Razor editor support) | Build time | The whole Razor syntax and compiler; still pre-1.0 |
+| 2. C# templates with an HTML-encoding interpolated string handler | Full (it's just C#) | Build time | Templates live in `.cs` files |
+| 3. Own Handlebars-style syntax, compiled by a source generator | None, unless a language server is written | Build time (via generator diagnostics and `#line` mapping) | Parser, incremental generator, error mapping; a language server for autocomplete would be a large project of its own |
+
+1. **RazorSlices:** `.cshtml` files compiled to strongly typed slices; trimming and AOT compatible; partials and layouts supported; built on ASP.NET Core's `IResult`, so Merlin would need an adapter. You can't restrict it to a subset of Razor.
+2. **C# string handler:** templates are plain functions. if → ternary or `switch`; each → a helper over LINQ; partials → functions returning `Html`; layouts → functions taking the page's `Html`. Fits Merlin's functional style; no dependencies.
+3. **Own syntax:** `.html` templates with `{{#if}}`, `{{#each}}`, `{{> partial}}`, `{{model.Title}}`, compiled to the same code option 2 would be written as. The IDE gives no completion, go-to-definition or rename inside templates; renaming a model property breaks the build at the template instead of updating it.
+
+### Leaning: option 2 first
+
+It's small, typed, AOT-safe, and it's the code option 3 would generate, so nothing is wasted if separate template files are wanted later. A `Reply.Html(Html)` helper would fit the existing replies.
+
+Sketch (not yet compiled):
+
+```csharp
+public readonly record struct Html(string Value)
+{
+    public static readonly Html Empty = new("");
+    public static Html Each<T>(IEnumerable<T> items, Func<T, Html> render) =>
+        new(string.Concat(items.Select(i => render(i).Value)));
+}
+
+[InterpolatedStringHandler]
+public ref struct HtmlHandler(int literalLength, int formattedCount)
+{
+    private DefaultInterpolatedStringHandler inner = new(literalLength, formattedCount);
+
+    public void AppendLiteral(string s) => inner.AppendLiteral(s);          // template text: trusted
+    public void AppendFormatted(Html h) => inner.AppendLiteral(h.Value);    // already-safe HTML
+    public void AppendFormatted<T>(T value) =>                              // everything else: encoded
+        inner.AppendLiteral(HtmlEncoder.Default.Encode(value?.ToString() ?? ""));
+
+    public Html ToHtml() => new(inner.ToStringAndClear());
+}
+
+public static class H
+{
+    public static Html Of(ref HtmlHandler html) => html.ToHtml();
+}
+
+// usage
+static Html PostList(IEnumerable<Post> posts, User? user) => H.Of($"""
+    <h1>Posts</h1>
+    {(user is { } u ? H.Of($"<p>Hello, {u.Name}</p>") : Html.Empty)}
+    <ul>
+        {Html.Each(posts, p => H.Of($"<li><a href=\"/posts/{p.Id}\">{p.Title}</a></li>"))}
+    </ul>
+    """);
+```
+
+Notes:
+
+- Use `$$"""` for templates containing literal braces (inline CSS or JS); the holes are then `{{value}}`.
+- Encoding covers text and quoted attribute values, but not URL safety: `href="{userInput}"` still allows `javascript:` links, so user-supplied URLs need their own check or helper.
+- Overload trap: passing a `List<Html>` directly to the handler binds to the generic `AppendFormatted<T>` and encodes the list's `ToString()`. That's why `Each` returns a single `Html` instead of the handler accepting collections.
+
+### Open questions
+
+- [ ] Option 2, or RazorSlices if separate template files with editor support matter more?
+- [ ] Is option 3 worth it later, given it has no autocomplete without a language server?
+- [ ] Render to a string, or stream to the response (e.g. via `IBufferWriter<byte>`) for large pages?
+- [ ] Where do `Html`, `HtmlHandler` and `H` live: in Merlin, or in a separate package?
 
 ## Open questions and decisions
 
