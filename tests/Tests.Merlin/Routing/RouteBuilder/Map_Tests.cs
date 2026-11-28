@@ -2,6 +2,7 @@
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
 using Merlin.Domain;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Merlin.Routing.RouteBuilder_Tests;
 
@@ -46,7 +47,7 @@ public class Map_Tests
 		// Arrange
 		var router = new Router();
 		var builder = router.Map("/a");
-		router.Lock(Substitute.For<IServiceProvider>());
+		router.Lock(Substitute.For<IServiceProvider>(), new ServiceCollection());
 
 		// Act
 		var result = Record.Exception(() => builder.Map("/b"));

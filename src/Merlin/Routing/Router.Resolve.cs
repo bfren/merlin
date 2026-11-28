@@ -13,9 +13,9 @@ public sealed partial class Router
 	/// </summary>
 	/// <param name="method">HTTP method of the trie, for error messages.</param>
 	/// <param name="node">Node to start from.</param>
-	/// <param name="sp">Root service provider, passed to handler factories.</param>
+	/// <param name="sp">Singleton-only service provider, passed to handler factories.</param>
 	/// <exception cref="InvalidOperationException">A handler factory failed.</exception>
-	private static void Resolve(Method method, Node node, IServiceProvider sp)
+	private static void Resolve(Method method, Node node, SingletonProvider sp)
 	{
 		node.Route = node.Route?.Resolve(method, sp);
 

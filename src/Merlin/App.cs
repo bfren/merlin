@@ -1,6 +1,7 @@
 // Merlin: .NET HTTP Server.
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using System.Threading.Tasks;
@@ -10,6 +11,7 @@ using Merlin.Replies;
 using Merlin.Routing;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Wrap;
@@ -57,6 +59,32 @@ public sealed class App
 	}
 
 	/// <summary>
+	/// Register a class as a singleton, so handler factories can resolve it.
+	/// </summary>
+	/// <remarks>
+	/// The same as <c>Builder.Services.AddSingleton&lt;T&gt;()</c>. Handler factories can only resolve singletons.
+	/// </remarks>
+	/// <typeparam name="T">Service type, created by the container from its public constructor.</typeparam>
+	/// <returns>The application's service collection, to add more services.</returns>
+	public IServiceCollection Register<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>()
+		where T : class =>
+		Builder.Services.AddSingleton<T>();
+
+	/// <summary>
+	/// Register an implementation of a service as a singleton, so handler factories can resolve it.
+	/// </summary>
+	/// <remarks>
+	/// The same as <c>Builder.Services.AddSingleton&lt;TService, TImplementation&gt;()</c>. Handler factories can only resolve singletons.
+	/// </remarks>
+	/// <typeparam name="TService">Service type that handler factories resolve, e.g. an interface.</typeparam>
+	/// <typeparam name="TImplementation">Implementation type, created by the container from its public constructor.</typeparam>
+	/// <returns>The application's service collection, to add more services.</returns>
+	public IServiceCollection Register<TService, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImplementation>()
+		where TService : class
+		where TImplementation : class, TService =>
+		Builder.Services.AddSingleton<TService, TImplementation>();
+
+	/// <summary>
 	/// Build the host (validating service registrations), resolve each route's handler and lock the routes,
 	/// and start handling requests.
 	/// </summary>
@@ -71,9 +99,10 @@ public sealed class App
 			opt.ValidateOnBuild = true;
 		});
 
-		// build application and lock routes (no mapping once the application has started)
+		// build application and lock routes (no mapping once the application has started) -
+		// locking routes also resolves all the RouteHandlers into HandlerAsync objects
 		var app = Builder.Build();
-		Router.Lock(app.Services);
+		Router.Lock(app.Services, Builder.Services);
 
 		// add request handler middleware
 		app.Run(ctx => Adapter(app.Logger, ctx));

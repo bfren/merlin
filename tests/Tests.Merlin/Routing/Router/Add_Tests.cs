@@ -2,6 +2,7 @@
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
 using Merlin.Domain;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Merlin.Routing.Router_Tests;
 
@@ -156,7 +157,7 @@ public class Add_Tests
 	{
 		// Arrange
 		var router = new Router();
-		router.Lock(Substitute.For<IServiceProvider>());
+		router.Lock(Substitute.For<IServiceProvider>(), new ServiceCollection());
 
 		// Act
 		var result = Add(router, Method.Get, "/posts");

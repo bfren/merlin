@@ -48,9 +48,9 @@ internal sealed class TestHost : IAsyncDisposable
 		(App, this.run, this.lifetime, Client, Logs, Completed) = (app, run, lifetime, new() { BaseAddress = address }, logs, completed);
 
 	/// <summary>
-	/// Create an app with <see cref="Replies.TestJson"/>, add any services, map its routes and start it.
+	/// Create an app with <see cref="Replies.TestJson"/>, add any services, set it up, map its routes and start it.
 	/// </summary>
-	public static async Task<TestHost> StartAsync(Action<Router> map, Action<IServiceCollection>? services = null)
+	public static async Task<TestHost> StartAsync(Action<Router> map, Action<IServiceCollection>? services = null, Action<App>? setup = null)
 	{
 		var app = new App([], Replies.TestJson.Default);
 		app.Builder.WebHost.UseUrls("http://127.0.0.1:0");
@@ -65,6 +65,7 @@ internal sealed class TestHost : IAsyncDisposable
 		app.Builder.Services.AddHostedService(sp => new Started(sp, started));
 
 		services?.Invoke(app.Builder.Services);
+		setup?.Invoke(app);
 		map(app.Router);
 		var run = app.StartAsync();
 

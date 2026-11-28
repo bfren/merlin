@@ -101,6 +101,45 @@ public partial class StartAsync_Tests
 		}
 
 		[Fact]
+		public async Task Transient_Service_From_Factory_Fails_StartAsync()
+		{
+			// Arrange
+			var start = () => TestHost.StartAsync(
+				r => r.Map("/").Get(sp => Greet(sp.GetRequiredService<Greeting>())),
+				s => s.AddTransient(_ => new Greeting(Rnd.Str))
+			);
+
+			// Act
+			var result = await Record.ExceptionAsync(start);
+
+			// Assert
+			var ex = Assert.IsType<InvalidOperationException>(result);
+			var inner = Assert.IsType<InvalidOperationException>(ex.InnerException);
+			Assert.Contains(nameof(ServiceLifetime.Transient), inner.Message);
+		}
+
+		[Fact]
+		public async Task Singleton_Registered_By_Extension_Method_Reaches_Factory()
+		{
+			// Arrange
+			Greeting? resolved = null;
+			var greeting = new Greeting(Rnd.Str);
+
+			// Act
+			await using var host = await TestHost.StartAsync(
+				r => r.Map("/").Get(sp =>
+				{
+					resolved = sp.GetRequiredService<Greeting>();
+					return Greet(resolved);
+				}),
+				s => s.AddGreeting(greeting)
+			);
+
+			// Assert
+			Assert.Same(greeting, resolved);
+		}
+
+		[Fact]
 		public async Task Registration_With_Missing_Dependency_Fails_StartAsync()
 		{
 			// Arrange
@@ -116,4 +155,11 @@ public partial class StartAsync_Tests
 			_ = Assert.IsType<AggregateException>(result);
 		}
 	}
+}
+
+// stands in for a library's AddX() extension method
+internal static class GreetingServiceCollectionExtensions
+{
+	public static IServiceCollection AddGreeting(this IServiceCollection services, StartAsync_Tests.Dependencies.Greeting greeting) =>
+		services.AddSingleton(greeting);
 }

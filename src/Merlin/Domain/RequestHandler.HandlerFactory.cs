@@ -10,8 +10,10 @@ namespace Merlin.Domain;
 /// at startup, so a handler gets its dependencies (e.g. a database connection factory) by closure.
 /// </summary>
 /// <remarks>
-/// Only resolve singletons: the provider is the root one, and resolving a scoped service fails at startup.
+/// Only singletons can be resolved: a scoped or transient service fails at startup, because the handler would keep
+/// one instance for good. For per-request things, resolve a singleton that creates them, such as a
+/// <c>DbDataSource</c>, an <c>IDbContextFactory&lt;T&gt;</c> or a <c>Func&lt;T&gt;</c>.
 /// </remarks>
-/// <param name="sp">The application's root service provider.</param>
+/// <param name="sp">The application's services, limited to singletons.</param>
 /// <returns>The asynchronous handler used for every request to the route.</returns>
 public delegate HandlerAsync HandlerFactory(IServiceProvider sp);

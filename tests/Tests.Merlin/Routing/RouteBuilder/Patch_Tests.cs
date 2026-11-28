@@ -3,6 +3,7 @@
 
 using Merlin.Domain;
 using Merlin.Replies;
+using Microsoft.Extensions.DependencyInjection;
 using Wrap;
 
 namespace Merlin.Routing.RouteBuilder_Tests;
@@ -140,9 +141,9 @@ public class Patch_Tests
 
 		// Act
 		router.Map("/posts").Patch(sp => { received = sp; return Substitute.For<HandlerAsync>(); });
-		router.Lock(sp);
+		router.Lock(sp, new ServiceCollection());
 
 		// Assert
-		Assert.Same(sp, received);
+		Assert.NotNull(received);
 	}
 }

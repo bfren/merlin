@@ -2,6 +2,7 @@
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
 using Merlin.Domain;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Merlin.Routing.Router_Tests;
 
@@ -17,7 +18,7 @@ public partial class Match_Tests
 			var handler = NewHandler();
 			router.Map("/posts").Get(handler);
 
-			router.Lock(Sp);
+			router.Lock(Sp, new ServiceCollection());
 
 			// Act
 			var result = router.Match(Method.Get, "/posts");
@@ -38,7 +39,7 @@ public partial class Match_Tests
 			var handler = NewHandler();
 			router.Map("/").Get(handler);
 
-			router.Lock(Sp);
+			router.Lock(Sp, new ServiceCollection());
 
 			// Act
 			var result = router.Match(Method.Get, path);
@@ -56,7 +57,7 @@ public partial class Match_Tests
 			var handler = NewHandler();
 			router.Map("/posts").Get(handler);
 
-			router.Lock(Sp);
+			router.Lock(Sp, new ServiceCollection());
 
 			// Act
 			var result = router.Match(Method.Get, "/POSTS");
@@ -74,7 +75,7 @@ public partial class Match_Tests
 			var handler = NewHandler();
 			router.Map("/posts").Get(handler);
 
-			router.Lock(Sp);
+			router.Lock(Sp, new ServiceCollection());
 
 			// Act
 			var result = router.Match(Method.Get, "/posts/");
@@ -96,7 +97,7 @@ public partial class Match_Tests
 			var handler = NewHandler();
 			router.Map("/posts/comments").Get(handler);
 
-			router.Lock(Sp);
+			router.Lock(Sp, new ServiceCollection());
 
 			// Act
 			var result = router.Match(Method.Get, path);
@@ -113,7 +114,7 @@ public partial class Match_Tests
 			var router = new Router();
 			router.Map("/posts").Get(NewHandler());
 
-			router.Lock(Sp);
+			router.Lock(Sp, new ServiceCollection());
 
 			// Act
 			var result = router.Match(Method.Get, "/posts/extra");
@@ -129,7 +130,7 @@ public partial class Match_Tests
 			var router = new Router();
 			router.Map("/posts/latest").Get(NewHandler());
 
-			router.Lock(Sp);
+			router.Lock(Sp, new ServiceCollection());
 
 			// Act
 			var result = router.Match(Method.Get, "/posts");

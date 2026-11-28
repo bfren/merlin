@@ -449,7 +449,7 @@ app.Router
         .Get(sp => GetPost(sp.GetRequiredService<IPostRepo>()));
 ```
 
-`RouteBuilder` takes a `Handler` (sync), a `HandlerAsync` or a `HandlerFactory`, and stores the `RequestHandler` union in the trie. `Router.Lock(app.Services)` runs after `Builder.Build()` and before Kestrel starts. It calls each factory once, wraps sync handlers, and leaves only `HandlerAsync`s to match. A missing service fails `StartAsync`, not the first request. Factories only get singletons: per-request things such as a DB connection are injected as a singleton factory (e.g. `Func<DbConnection>`). Scoped services are out of scope for now, and `ValidateScopes` stops them being resolved from the root by mistake.
+`RouteBuilder` takes a `Handler` (sync), a `HandlerAsync` or a `HandlerFactory`, and stores the `RequestHandler` union in the trie. `Router.Lock(app.Services)` runs after `Builder.Build()` and before Kestrel starts. It calls each factory once, wraps sync handlers, and leaves only `HandlerAsync`s to match. A missing service fails `StartAsync`, not the first request. Factories can only resolve singletons: `Lock` gives them a provider that throws for a scoped or transient registration, so the mistake fails `StartAsync`. Per-request things such as a DB connection are injected as a singleton that creates them (`DbDataSource`, `IDbContextFactory<T>`, `Func<T>`) and opened inside the handler.
 
 ## Static files and later work
 

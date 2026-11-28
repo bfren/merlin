@@ -2,6 +2,7 @@
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
 using Merlin.Domain;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Merlin.Routing.Router_Tests;
 
@@ -19,7 +20,7 @@ public partial class Match_Tests
 			router.Map("/posts/{slug}").Get(param);
 			router.Map("/posts/latest").Get(literal);
 
-			router.Lock(Sp);
+			router.Lock(Sp, new ServiceCollection());
 
 			// Act
 			var latest = router.Match(Method.Get, "/posts/latest");
@@ -40,7 +41,7 @@ public partial class Match_Tests
 			router.Map("/posts/{slug}").Get(untyped);
 			router.Map("/posts/{id:int}").Get(typed);
 
-			router.Lock(Sp);
+			router.Lock(Sp, new ServiceCollection());
 
 			// Act
 			var number = router.Match(Method.Get, "/posts/42");
@@ -65,7 +66,7 @@ public partial class Match_Tests
 			router.Map("/files/{path:*}").Get(catchAll);
 			router.Map("/files/readme").Get(literal);
 
-			router.Lock(Sp);
+			router.Lock(Sp, new ServiceCollection());
 
 			// Act
 			var readme = router.Match(Method.Get, "/files/readme");
@@ -86,7 +87,7 @@ public partial class Match_Tests
 			router.Map("/a/latest/x").Get(literal);
 			router.Map("/a/{slug}/y").Get(param);
 
-			router.Lock(Sp);
+			router.Lock(Sp, new ServiceCollection());
 
 			// Act
 			var result = router.Match(Method.Get, "/a/latest/y");
@@ -106,7 +107,7 @@ public partial class Match_Tests
 			router.Map("/files/{id:int}/info").Get(NewHandler());
 			router.Map("/files/{path:*}").Get(catchAll);
 
-			router.Lock(Sp);
+			router.Lock(Sp, new ServiceCollection());
 
 			// Act
 			var result = router.Match(Method.Get, "/files/42/download");
@@ -138,7 +139,7 @@ public partial class Match_Tests
 				router.Map("/x/{s:short}").Get(shortHandler);
 			}
 
-			router.Lock(Sp);
+			router.Lock(Sp, new ServiceCollection());
 
 			// Act
 			var result = router.Match(Method.Get, "/x/42");
@@ -163,8 +164,8 @@ public partial class Match_Tests
 			second.Map("/posts/{slug}").Get(paramB);
 			second.Map("/posts/latest").Get(literalB);
 
-			first.Lock(Sp);
-			second.Lock(Sp);
+			first.Lock(Sp, new ServiceCollection());
+			second.Lock(Sp, new ServiceCollection());
 
 			// Act
 			var a = first.Match(Method.Get, "/posts/latest");

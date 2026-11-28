@@ -3,6 +3,7 @@
 
 using Merlin.Domain;
 using Merlin.Replies;
+using Microsoft.Extensions.DependencyInjection;
 using Wrap;
 using Wrap.Testing;
 
@@ -22,6 +23,110 @@ public class Lock_Tests
 		return (factory, handler);
 	}
 
+	public sealed class Thing;
+
+	// a router with one route whose factory resolves Thing, recording what it got
+	private static (Router Router, Func<object?> Resolved) MapResolvingThing()
+	{
+		var router = new Router();
+		object? resolved = null;
+		router.Map("/things").Get(sp => { resolved = sp.GetService(typeof(Thing)); return Substitute.For<HandlerAsync>(); });
+		return (router, () => resolved);
+	}
+
+	private static IServiceProvider ProviderWith(Thing thing)
+	{
+		var sp = NewProvider();
+		_ = sp.GetService(typeof(Thing)).Returns(thing);
+		return sp;
+	}
+
+	public class Singletons
+	{
+		[Fact]
+		public void Singleton_Is_Resolved()
+		{
+			// Arrange
+			var (router, resolved) = MapResolvingThing();
+			var thing = new Thing();
+			var services = new ServiceCollection().AddSingleton(thing);
+
+			// Act
+			router.Lock(ProviderWith(thing), services);
+
+			// Assert
+			Assert.Same(thing, resolved());
+		}
+
+		[Theory]
+		[InlineData(ServiceLifetime.Transient)]
+		[InlineData(ServiceLifetime.Scoped)]
+		public void Other_Lifetime_Throws_Naming_Type_And_Lifetime(ServiceLifetime lifetime)
+		{
+			// Arrange
+			var (router, _) = MapResolvingThing();
+			IServiceCollection services = new ServiceCollection();
+			services.Add(new ServiceDescriptor(typeof(Thing), typeof(Thing), lifetime));
+
+			// Act
+			var result = Record.Exception(() => router.Lock(ProviderWith(new()), services));
+
+			// Assert
+			var ex = Assert.IsType<InvalidOperationException>(result);
+			Assert.Contains("GET", ex.Message);
+			Assert.Contains("/things", ex.Message);
+			var inner = Assert.IsType<InvalidOperationException>(ex.InnerException);
+			Assert.Contains(nameof(Thing), inner.Message);
+			Assert.Contains(lifetime.ToString(), inner.Message);
+		}
+
+		[Fact]
+		public void Last_Registration_Decides_Lifetime()
+		{
+			// Arrange
+			var (singletonLast, _) = MapResolvingThing();
+			var (transientLast, _) = MapResolvingThing();
+			var thing = new Thing();
+
+			// Act
+			var a = Record.Exception(() => singletonLast.Lock(ProviderWith(thing), new ServiceCollection().AddTransient<Thing>().AddSingleton(thing)));
+			var b = Record.Exception(() => transientLast.Lock(ProviderWith(thing), new ServiceCollection().AddSingleton(thing).AddTransient<Thing>()));
+
+			// Assert
+			Assert.Null(a);
+			_ = Assert.IsType<InvalidOperationException>(b);
+		}
+
+		[Fact]
+		public void Unregistered_Type_Is_Passed_To_Given_Provider()
+		{
+			// Arrange
+			var (router, resolved) = MapResolvingThing();
+			var thing = new Thing();
+
+			// Act
+			router.Lock(ProviderWith(thing), new ServiceCollection());
+
+			// Assert
+			Assert.Same(thing, resolved());
+		}
+
+		[Fact]
+		public void Plain_Handlers_Do_Not_Use_Provider()
+		{
+			// Arrange
+			var router = new Router();
+			var sp = NewProvider();
+			router.Map("/a").Get(Substitute.For<Handler>());
+			router.Map("/b").Get(Substitute.For<HandlerAsync>());
+
+			// Act
+			router.Lock(sp, new ServiceCollection());
+
+			// Assert
+			Assert.Empty(sp.ReceivedCalls());
+		}
+	}
 	public class Factories
 	{
 		private static readonly string[] All =
@@ -45,7 +150,7 @@ public class Lock_Tests
 			router.Add(m, Template.Parse("/files/{path:*}", router.Types), catchAll);
 
 			// Act
-			router.Lock(NewProvider());
+			router.Lock(NewProvider(), new ServiceCollection());
 
 			// Assert
 			_ = literal.Received(1).Invoke(Arg.Any<IServiceProvider>());
@@ -65,26 +170,28 @@ public class Lock_Tests
 			}
 
 			// Act
-			router.Lock(NewProvider());
+			router.Lock(NewProvider(), new ServiceCollection());
 
 			// Assert
 			Assert.All(factories, x => x.Factory.Received(1).Invoke(Arg.Any<IServiceProvider>()));
 		}
 
 		[Fact]
-		public void Passes_Given_Provider_To_Factory()
+		public void Factory_Resolves_Services_From_Given_Provider()
 		{
 			// Arrange
 			var router = new Router();
-			var (factory, _) = NewFactory();
 			var sp = NewProvider();
-			router.Map("/posts").Get(factory);
+			var thing = new Thing();
+			_ = sp.GetService(typeof(Thing)).Returns(thing);
+			object? resolved = null;
+			router.Map("/posts").Get(f => { resolved = f.GetService(typeof(Thing)); return Substitute.For<HandlerAsync>(); });
 
 			// Act
-			router.Lock(sp);
+			router.Lock(sp, new ServiceCollection());
 
 			// Assert
-			_ = factory.Received(1).Invoke(sp);
+			Assert.Same(thing, resolved);
 		}
 
 		[Fact]
@@ -94,7 +201,7 @@ public class Lock_Tests
 			var router = new Router();
 			var (factory, _) = NewFactory();
 			router.Map("/posts").Get(factory);
-			router.Lock(NewProvider());
+			router.Lock(NewProvider(), new ServiceCollection());
 			factory.ClearReceivedCalls();
 
 			// Act
@@ -115,7 +222,7 @@ public class Lock_Tests
 			var router = new Router();
 			var (factory, handler) = NewFactory();
 			router.Map("/posts/{id:int}").Get(factory);
-			router.Lock(NewProvider());
+			router.Lock(NewProvider(), new ServiceCollection());
 
 			// Act
 			var result = router.Match(Method.Get, $"/posts/{Rnd.Int}");
@@ -131,7 +238,7 @@ public class Lock_Tests
 			var router = new Router();
 			var (factory, handler) = NewFactory();
 			router.Map("/posts").Get(factory);
-			router.Lock(NewProvider());
+			router.Lock(NewProvider(), new ServiceCollection());
 
 			// Act
 			var result = router.Match(Method.Head, "/posts");
@@ -147,7 +254,7 @@ public class Lock_Tests
 			var router = new Router();
 			var (factory, handler) = NewFactory();
 			router.Map("/files/{path:*}").Get(factory);
-			router.Lock(NewProvider());
+			router.Lock(NewProvider(), new ServiceCollection());
 
 			// Act
 			var result = router.Match(Method.Get, "/files/a/b.txt");
@@ -165,7 +272,7 @@ public class Lock_Tests
 			router.Map("/posts").Get(handler);
 
 			// Act
-			router.Lock(NewProvider());
+			router.Lock(NewProvider(), new ServiceCollection());
 
 			// Assert
 			Assert.Same(handler, Assert.IsType<Matched>(router.Match(Method.Get, "/posts")).Handler);
@@ -181,7 +288,7 @@ public class Lock_Tests
 			var req = Extensions.ReqExtensions_Tests.Helpers.NewReq();
 			_ = handler(req).Returns(reply);
 			router.Map("/posts").Get(handler);
-			router.Lock(NewProvider());
+			router.Lock(NewProvider(), new ServiceCollection());
 			var matched = Assert.IsType<Matched>(router.Match(Method.Get, "/posts"));
 
 			// Act
@@ -201,7 +308,7 @@ public class Lock_Tests
 			router.Map("/posts").Get(handler);
 
 			// Act
-			router.Lock(NewProvider());
+			router.Lock(NewProvider(), new ServiceCollection());
 
 			// Assert
 			Assert.Empty(handler.ReceivedCalls());
@@ -221,7 +328,7 @@ public class Lock_Tests
 			router.Map("/posts/{id:int}").Post(factory);
 
 			// Act
-			var result = Record.Exception(() => router.Lock(NewProvider()));
+			var result = Record.Exception(() => router.Lock(NewProvider(), new ServiceCollection()));
 
 			// Assert
 			var ex = Assert.IsType<InvalidOperationException>(result);
@@ -241,7 +348,7 @@ public class Lock_Tests
 			router.Map("/files/{path:*}").Get(factory);
 
 			// Act
-			var result = Record.Exception(() => router.Lock(NewProvider()));
+			var result = Record.Exception(() => router.Lock(NewProvider(), new ServiceCollection()));
 
 			// Assert
 			var ex = Assert.IsType<InvalidOperationException>(result);
@@ -255,7 +362,7 @@ public class Lock_Tests
 		{
 			// Arrange
 			var router = new Router();
-			router.Lock(NewProvider());
+			router.Lock(NewProvider(), new ServiceCollection());
 
 			// Act
 			var result = Record.Exception(() => router.Map("/posts"));
@@ -270,10 +377,10 @@ public class Lock_Tests
 		{
 			// Arrange
 			var router = new Router();
-			router.Lock(NewProvider());
+			router.Lock(NewProvider(), new ServiceCollection());
 
 			// Act
-			var result = Record.Exception(() => router.Lock(NewProvider()));
+			var result = Record.Exception(() => router.Lock(NewProvider(), new ServiceCollection()));
 
 			// Assert
 			_ = Assert.IsType<InvalidOperationException>(result);
@@ -286,10 +393,10 @@ public class Lock_Tests
 			var router = new Router();
 			var (factory, _) = NewFactory();
 			router.Map("/posts").Get(factory);
-			router.Lock(NewProvider());
+			router.Lock(NewProvider(), new ServiceCollection());
 
 			// Act
-			_ = Record.Exception(() => router.Lock(NewProvider()));
+			_ = Record.Exception(() => router.Lock(NewProvider(), new ServiceCollection()));
 
 			// Assert
 			_ = factory.Received(1).Invoke(Arg.Any<IServiceProvider>());

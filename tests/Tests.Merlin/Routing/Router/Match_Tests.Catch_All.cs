@@ -2,6 +2,7 @@
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
 using Merlin.Domain;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Merlin.Routing.Router_Tests;
 
@@ -17,7 +18,7 @@ public partial class Match_Tests
 			var handler = NewHandler();
 			router.Map("/files/{path:*}").Get(handler);
 
-			router.Lock(Sp);
+			router.Lock(Sp, new ServiceCollection());
 
 			// Act
 			var result = router.Match(Method.Get, "/files/docs/2026/report.pdf");
@@ -35,7 +36,7 @@ public partial class Match_Tests
 			var router = new Router();
 			router.Map("/files/{path:*}").Get(NewHandler());
 
-			router.Lock(Sp);
+			router.Lock(Sp, new ServiceCollection());
 
 			// Act
 			var result = router.Match(Method.Get, "/files/readme.txt");
@@ -52,7 +53,7 @@ public partial class Match_Tests
 			var router = new Router();
 			router.Map("/files/{path:*}").Get(NewHandler());
 
-			router.Lock(Sp);
+			router.Lock(Sp, new ServiceCollection());
 
 			// Act
 			var result = router.Match(Method.Get, "/files/..%2F..%2Fsecret");
@@ -69,7 +70,7 @@ public partial class Match_Tests
 			var router = new Router();
 			router.Map("/files/{path:*}").Get(NewHandler());
 
-			router.Lock(Sp);
+			router.Lock(Sp, new ServiceCollection());
 
 			// Act
 			var result = router.Match(Method.Get, "/files");
@@ -87,7 +88,7 @@ public partial class Match_Tests
 			var router = new Router();
 			router.Map("/{path:*}").Get(NewHandler());
 
-			router.Lock(Sp);
+			router.Lock(Sp, new ServiceCollection());
 
 			// Act
 			var result = router.Match(Method.Get, path);
@@ -105,7 +106,7 @@ public partial class Match_Tests
 			var (first, second) = (Rnd.Str, Rnd.Str);
 			router.Map("/{path:*}").Get(handler);
 
-			router.Lock(Sp);
+			router.Lock(Sp, new ServiceCollection());
 
 			// Act
 			var result = router.Match(Method.Get, $"/{first}/{second}");
@@ -125,7 +126,7 @@ public partial class Match_Tests
 			router.Map("/").Get(root);
 			router.Map("/{path:*}").Get(NewHandler());
 
-			router.Lock(Sp);
+			router.Lock(Sp, new ServiceCollection());
 
 			// Act
 			var result = router.Match(Method.Get, "/");

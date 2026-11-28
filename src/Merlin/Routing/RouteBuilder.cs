@@ -37,10 +37,10 @@ public sealed class RouteBuilder(Router router, Template template)
 	/// <summary>
 	/// Handle GET requests to this route with a handler factory.
 	/// </summary>
-	/// <param name="h">Request handler factory.</param>
+	/// <param name="f">Request handler factory.</param>
 	/// <returns>This builder, to add more methods.</returns>
-	public RouteBuilder Get(HandlerFactory h) =>
-		On(Method.Get, h);
+	public RouteBuilder Get(HandlerFactory f) =>
+		On(Method.Get, f);
 
 	/// <summary>
 	/// Handle HEAD requests to this route with a synchronous handler.
@@ -61,10 +61,10 @@ public sealed class RouteBuilder(Router router, Template template)
 	/// <summary>
 	/// Handle HEAD requests to this route with a handler factory.
 	/// </summary>
-	/// <param name="h">Request handler factory.</param>
+	/// <param name="f">Request handler factory.</param>
 	/// <returns>This builder, to add more methods.</returns>
-	public RouteBuilder Head(HandlerFactory h) =>
-		On(Method.Head, h);
+	public RouteBuilder Head(HandlerFactory f) =>
+		On(Method.Head, f);
 
 	/// <summary>
 	/// Handle POST requests to this route with a synchronous handler.
@@ -85,10 +85,10 @@ public sealed class RouteBuilder(Router router, Template template)
 	/// <summary>
 	/// Handle POST requests to this route with a handler factory.
 	/// </summary>
-	/// <param name="h">Request handler factory.</param>
+	/// <param name="f">Request handler factory.</param>
 	/// <returns>This builder, to add more methods.</returns>
-	public RouteBuilder Post(HandlerFactory h) =>
-		On(Method.Post, h);
+	public RouteBuilder Post(HandlerFactory f) =>
+		On(Method.Post, f);
 
 	/// <summary>
 	/// Handle PUT requests to this route with a synchronous handler.
@@ -109,10 +109,10 @@ public sealed class RouteBuilder(Router router, Template template)
 	/// <summary>
 	/// Handle PUT requests to this route with a handler factory.
 	/// </summary>
-	/// <param name="h">Request handler factory.</param>
+	/// <param name="f">Request handler factory.</param>
 	/// <returns>This builder, to add more methods.</returns>
-	public RouteBuilder Put(HandlerFactory h) =>
-		On(Method.Put, h);
+	public RouteBuilder Put(HandlerFactory f) =>
+		On(Method.Put, f);
 
 	/// <summary>
 	/// Handle PATCH requests to this route with a synchronous handler.
@@ -133,10 +133,10 @@ public sealed class RouteBuilder(Router router, Template template)
 	/// <summary>
 	/// Handle PATCH requests to this route with a handler factory.
 	/// </summary>
-	/// <param name="h">Request handler factory.</param>
+	/// <param name="f">Request handler factory.</param>
 	/// <returns>This builder, to add more methods.</returns>
-	public RouteBuilder Patch(HandlerFactory h) =>
-		On(Method.Patch, h);
+	public RouteBuilder Patch(HandlerFactory f) =>
+		On(Method.Patch, f);
 
 	/// <summary>
 	/// Handle DELETE requests to this route with a synchronous handler.
@@ -157,10 +157,10 @@ public sealed class RouteBuilder(Router router, Template template)
 	/// <summary>
 	/// Handle DELETE requests to this route with a handler factory.
 	/// </summary>
-	/// <param name="h">Request handler factory.</param>
+	/// <param name="f">Request handler factory.</param>
 	/// <returns>This builder, to add more methods.</returns>
-	public RouteBuilder Delete(HandlerFactory h) =>
-		On(Method.Delete, h);
+	public RouteBuilder Delete(HandlerFactory f) =>
+		On(Method.Delete, f);
 
 	/// <summary>
 	/// Handle requests to this route with the given HTTP method.
