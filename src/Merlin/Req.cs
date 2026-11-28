@@ -60,10 +60,10 @@ public sealed record class Req
 		Http.RequestAborted;
 
 	/// <summary>
-	/// Create a request from the application, the HTTP context, the captured route values and the JSON options.
+	/// Create a request from the HTTP context, a logger, the captured route values and the JSON options.
 	/// </summary>
-	/// <param name="app">Application the request belongs to.</param>
 	/// <param name="http">HTTP context for the current request.</param>
+	/// <param name="logger">Logger for the application.</param>
 	/// <param name="values">Route values captured by the router.</param>
 	/// <param name="json">JSON options used by binders.</param>
 	public Req(HttpContext http, ILogger logger, RouteValuesDictionary values, JsonSerializerOptions json) =>

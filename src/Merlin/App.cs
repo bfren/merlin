@@ -80,7 +80,7 @@ public sealed class App
 		var reply = Router.Match(method, path) switch
 		{
 			Matched m =>
-				await m.Handler(new(app, ctx, m.Values, Json)),
+				await m.Handler(new(ctx, app.Logger, m.Values, Json)),
 
 			MethodNotAllowed n =>
 				Reply.MethodNotAllowed(n.Allowed),

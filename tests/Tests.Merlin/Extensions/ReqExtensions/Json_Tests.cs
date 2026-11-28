@@ -200,6 +200,7 @@ public class Json_Tests
 			var options = new JsonSerializerOptions
 			{
 				TypeInfoResolver = BinderJson.Default,
+				PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
 				NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString
 			};
 			var req = NewReq(Json, /*lang=json,strict*/ """{"views":"3"}""", options);
@@ -222,7 +223,7 @@ public class Json_Tests
 
 			// Assert
 			// the type was never registered: the server's fault, not the client's
-			AssertFailure(result, Wrap.FailureKind.Unexpected, Unregistered, nameof(ReqExtensions_Tests.Unregistered));
+			AssertFailure(result, Wrap.FailureKind.Unexpected, Unregistered, typeof(Unregistered));
 		}
 
 		[Fact]
