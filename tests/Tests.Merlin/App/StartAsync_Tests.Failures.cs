@@ -25,7 +25,7 @@ public partial class StartAsync_Tests
 			_ = await host.SendAsync(Method.Get, "/");
 
 			// Assert
-			Assert.Contains(host.Logs, l => l.Level == LogLevel.Error && l.Message == message);
+			Assert.Contains(host.Logs, l => l.Level == LogLevel.Warning && l.Message == message);
 		}
 
 		[Theory]
@@ -93,7 +93,7 @@ public partial class StartAsync_Tests
 			// Assert
 			Assert.Equal(200, (int)response.StatusCode);
 			Assert.Equal(partial, body);
-			Assert.Contains(host.Logs, l => l.Level == LogLevel.Error && l.Message == message);
+			Assert.Contains(host.Logs, l => l.Level == LogLevel.Warning && l.Message == message);
 			Assert.Null(done.Exception);
 		}
 	}

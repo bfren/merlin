@@ -2,6 +2,7 @@
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using System.Threading.Tasks;
@@ -15,6 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Wrap;
+using Wrap.Extensions;
 
 namespace Merlin;
 
@@ -100,7 +102,7 @@ public sealed class App
 		});
 
 		// build application and lock routes (no mapping once the application has started) -
-		// locking routes also resolves all the RouteHandlers into HandlerAsync objects
+		// locking routes also resolves every RequestHandler into a HandlerAsync
 		var app = Builder.Build();
 		Router.Lock(app.Services, Builder.Services);
 
@@ -112,8 +114,13 @@ public sealed class App
 	}
 
 	/// <summary>
-	/// Handle one request: match it against the routes, run the handler, log any failure and write the reply.
+	/// Handle one request: match it against the routes, run the handler and write its reply.
 	/// </summary>
+	/// <remarks>
+	/// A failure from the handler, or from writing its reply, is logged and replaced with an error reply
+	/// (<see cref="Reply.Error"/>), unless the response has already started. A cancelled request (a <see cref="FailureKind.Cancelled"/>
+	/// failure, or a client that has gone) is not logged and gets no reply. A HEAD request gets the headers without the body.
+	/// </remarks>
 	/// <param name="logger">Application logger.</param>
 	/// <param name="ctx">HTTP context of the request.</param>
 	/// <returns>A task that completes when the request has been handled.</returns>
@@ -134,17 +141,31 @@ public sealed class App
 				Reply.NotFound()
 		};
 
-		// if the request failed, log and return error reply
-		if (reply is Failure f)
+		// a cancelled request is not an error, nobody is there to read a reply
+		if ((reply is Failure f && f.Kind == FailureKind.Cancelled) || ctx.RequestAborted.IsCancellationRequested)
 		{
-			logger.Log(f);
-			if (!ctx.Response.HasStarted)
-			{
-				// write an error reply
-			}
+			return;
 		}
 
-		// write reply to response etc
+		// HEAD reply returns the same headers as GET, but no body
+		if (method == Method.Head)
+		{
+			ctx.Response.Body = Stream.Null;
+		}
 
+		// write reply to the HTTP response and log any Failure values
+		Task<Result<bool>> write(Reply r) =>
+			r.WriteAsync(ctx.Response, Json, ctx.RequestAborted);
+
+		_ = await reply
+			.BindAsync(write)
+			.IfFailedAsync(async f =>
+			{
+				logger.Log(f);
+				if (!ctx.Response.HasStarted)
+				{
+					_ = await Reply.Error(f).BindAsync(write);
+				}
+			});
 	}
 }

@@ -15,10 +15,15 @@ namespace Merlin.Replies;
 public abstract partial record class Reply
 {
 	/// <summary>
-	/// Create an error reply for a failure.
+	/// Create an RFC 9457 problem reply for a failure.
 	/// </summary>
+	/// <remarks>
+	/// The status comes from the failure's <see cref="FailureKind"/> (500 for unexpected, unspecified and custom kinds),
+	/// and the title is its standard reason phrase. A 4xx reply has the failure's message, with its args filled in, as <c>detail</c>;
+	/// a 5xx or cancelled reply has no <c>detail</c>, so internal details are not sent to the client.
+	/// </remarks>
 	/// <param name="failure">Failure.</param>
-	/// <returns>An error reply.</returns>
+	/// <returns>A problem reply.</returns>
 	public static Result<Reply> Error(Failure failure)
 	{
 		var status = Statuses.GetValueOrDefault(failure.Kind, Status.InternalServerError);
