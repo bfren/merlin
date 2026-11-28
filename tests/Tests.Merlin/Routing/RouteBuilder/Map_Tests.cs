@@ -32,12 +32,12 @@ public class Map_Tests
 		var b = Template.Parse("/b", router.Types);
 
 		// Act
-		router.Map("/a").Get(Substitute.For<Handler>())
-			.Map("/b").Post(Substitute.For<Handler>());
+		router.Map("/a").Get(Substitute.For<HandlerAsync>())
+			.Map("/b").Post(Substitute.For<HandlerAsync>());
 
 		// Assert
-		Assert.Throws<InvalidOperationException>(() => router.Add(Method.Get, a, Substitute.For<Handler>()));
-		Assert.Throws<InvalidOperationException>(() => router.Add(Method.Post, b, Substitute.For<Handler>()));
+		Assert.Throws<InvalidOperationException>(() => router.Add(Method.Get, a, Substitute.For<HandlerAsync>()));
+		Assert.Throws<InvalidOperationException>(() => router.Add(Method.Post, b, Substitute.For<HandlerAsync>()));
 	}
 
 	[Fact]
@@ -46,7 +46,7 @@ public class Map_Tests
 		// Arrange
 		var router = new Router();
 		var builder = router.Map("/a");
-		router.Lock();
+		router.Lock(Substitute.For<IServiceProvider>());
 
 		// Act
 		var result = Record.Exception(() => builder.Map("/b"));

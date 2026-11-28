@@ -8,7 +8,7 @@ namespace Merlin.Routing.Router_Tests;
 public class Add_Tests
 {
 	private static Exception? Add(Router router, Method method, string source) =>
-		Record.Exception(() => router.Add(method, Template.Parse(source, router.Types), Substitute.For<Handler>()));
+		Record.Exception(() => router.Add(method, Template.Parse(source, router.Types), Substitute.For<HandlerAsync>()));
 
 	public class Duplicates
 	{
@@ -156,7 +156,7 @@ public class Add_Tests
 	{
 		// Arrange
 		var router = new Router();
-		router.Lock();
+		router.Lock(Substitute.For<IServiceProvider>());
 
 		// Act
 		var result = Add(router, Method.Get, "/posts");

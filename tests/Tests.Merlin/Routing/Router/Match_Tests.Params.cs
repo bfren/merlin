@@ -18,6 +18,8 @@ public partial class Match_Tests
 			var name = Rnd.Str;
 			router.Map("/hello/{name}").Get(handler);
 
+			router.Lock(Sp);
+
 			// Act
 			var result = router.Match(Method.Get, $"/hello/{name}");
 
@@ -37,6 +39,8 @@ public partial class Match_Tests
 			var name = Rnd.Str;
 			router.Map("/hello/{name}").Get(NewHandler());
 
+			router.Lock(Sp);
+
 			// Act
 			var result = router.Match(Method.Get, $"/hello/{name}");
 
@@ -53,6 +57,8 @@ public partial class Match_Tests
 			var id = Rnd.Int;
 			router.Map("/posts/{id:int}").Get(NewHandler());
 
+			router.Lock(Sp);
+
 			// Act
 			var result = router.Match(Method.Get, $"/posts/{id}");
 
@@ -67,6 +73,8 @@ public partial class Match_Tests
 			// Arrange
 			var router = new Router();
 			router.Map("/archive/{year:int}/{draft:bool}").Get(NewHandler());
+
+			router.Lock(Sp);
 
 			// Act
 			var result = router.Match(Method.Get, "/archive/2026/true");
@@ -83,6 +91,8 @@ public partial class Match_Tests
 			// Arrange
 			var router = new Router();
 			router.Map("/posts/{id:int}").Get(NewHandler());
+
+			router.Lock(Sp);
 
 			// Act
 			var result = router.Match(Method.Get, "/posts/abc");
@@ -103,6 +113,8 @@ public partial class Match_Tests
 			var router = new Router();
 			router.Map("/hello/{name}").Get(NewHandler());
 
+			router.Lock(Sp);
+
 			// Act
 			var result = router.Match(Method.Get, path);
 
@@ -117,6 +129,8 @@ public partial class Match_Tests
 			// Arrange
 			var router = new Router();
 			router.Map("/a/{x}/{y}").Get(NewHandler());
+
+			router.Lock(Sp);
 
 			// Act
 			var result = router.Match(Method.Get, "/a/b%2Fc");

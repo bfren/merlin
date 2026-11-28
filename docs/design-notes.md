@@ -435,6 +435,22 @@ static Task<Result<Reply>> UpdatePost(Req req) =>
 
 Later binders follow the same pattern: `req.Header<T>`, `req.Cookie`, `req.Claim(...)`.
 
+## Dependencies
+
+Handlers get their dependencies by closure, resolved once at startup. `Req` has no service provider, so a handler's dependencies are visible in its signature and tests can pass fakes directly.
+
+```csharp
+static HandlerAsync GetPost(IPostRepo repo) =>
+    async req => /* uses repo */;
+
+app.Builder.Services.AddSingleton<IPostRepo, PostRepo>();
+app.Router
+    .Map("/posts/{id:int}")
+        .Get(sp => GetPost(sp.GetRequiredService<IPostRepo>()));
+```
+
+`RouteBuilder` takes a `Handler` (sync), a `HandlerAsync` or a `HandlerFactory`, and stores the `RequestHandler` union in the trie. `Router.Lock(app.Services)` runs after `Builder.Build()` and before Kestrel starts. It calls each factory once, wraps sync handlers, and leaves only `HandlerAsync`s to match. A missing service fails `StartAsync`, not the first request. Factories only get singletons: per-request things such as a DB connection are injected as a singleton factory (e.g. `Func<DbConnection>`). Scoped services are out of scope for now, and `ValidateScopes` stops them being resolved from the root by mistake.
+
 ## Static files and later work
 
 Static files come from Kestrel's middleware or from Caddy, not from Merlin. A hand-written file server has to get path traversal, MIME types, `ETag` / `304`, `Range` / `206` and `HEAD` right, and none of that is the learning goal.

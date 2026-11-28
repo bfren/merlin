@@ -10,6 +10,7 @@ using Merlin.Replies;
 using Merlin.Routing;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Wrap;
 
@@ -56,23 +57,38 @@ public sealed class App
 	}
 
 	/// <summary>
-	/// Build the host, lock the routes, and start handling requests.
+	/// Build the host (validating service registrations), resolve each route's handler and lock the routes,
+	/// and start handling requests.
 	/// </summary>
 	/// <returns>A task that completes when the application shuts down.</returns>
+	/// <exception cref="System.InvalidOperationException">A handler factory failed, e.g. its service is not registered.</exception>
 	public Task StartAsync()
 	{
+		// validate services on build
+		_ = Builder.Host.UseDefaultServiceProvider(opt =>
+		{
+			opt.ValidateScopes = true;
+			opt.ValidateOnBuild = true;
+		});
+
 		// build application and lock routes (no mapping once the application has started)
 		var app = Builder.Build();
-		Router.Lock();
+		Router.Lock(app.Services);
 
 		// add request handler middleware
-		app.Run(ctx => Adapter(app, ctx));
+		app.Run(ctx => Adapter(app.Logger, ctx));
 
 		// run app
 		return app.RunAsync();
 	}
 
-	private async Task Adapter(WebApplication app, HttpContext ctx)
+	/// <summary>
+	/// Handle one request: match it against the routes, run the handler, log any failure and write the reply.
+	/// </summary>
+	/// <param name="logger">Application logger.</param>
+	/// <param name="ctx">HTTP context of the request.</param>
+	/// <returns>A task that completes when the request has been handled.</returns>
+	private async Task Adapter(ILogger logger, HttpContext ctx)
 	{
 		// use Router to match request against registered routes
 		var method = Method.Wrap(ctx.Request.Method);
@@ -80,7 +96,7 @@ public sealed class App
 		var reply = Router.Match(method, path) switch
 		{
 			Matched m =>
-				await m.Handler(new(ctx, app.Logger, m.Values, Json)),
+				await m.Handler(new(ctx, logger, m.Values, Json)),
 
 			MethodNotAllowed n =>
 				Reply.MethodNotAllowed(n.Allowed),
@@ -92,7 +108,7 @@ public sealed class App
 		// if the request failed, log and return error reply
 		if (reply is Failure f)
 		{
-			app.Logger.Log(f);
+			logger.Log(f);
 			if (!ctx.Response.HasStarted)
 			{
 				// write an error reply

@@ -17,6 +17,8 @@ public partial class Match_Tests
 			var handler = NewHandler();
 			router.Map("/files/{path:*}").Get(handler);
 
+			router.Lock(Sp);
+
 			// Act
 			var result = router.Match(Method.Get, "/files/docs/2026/report.pdf");
 
@@ -33,6 +35,8 @@ public partial class Match_Tests
 			var router = new Router();
 			router.Map("/files/{path:*}").Get(NewHandler());
 
+			router.Lock(Sp);
+
 			// Act
 			var result = router.Match(Method.Get, "/files/readme.txt");
 
@@ -48,6 +52,8 @@ public partial class Match_Tests
 			var router = new Router();
 			router.Map("/files/{path:*}").Get(NewHandler());
 
+			router.Lock(Sp);
+
 			// Act
 			var result = router.Match(Method.Get, "/files/..%2F..%2Fsecret");
 
@@ -62,6 +68,8 @@ public partial class Match_Tests
 			// Arrange
 			var router = new Router();
 			router.Map("/files/{path:*}").Get(NewHandler());
+
+			router.Lock(Sp);
 
 			// Act
 			var result = router.Match(Method.Get, "/files");
@@ -79,6 +87,8 @@ public partial class Match_Tests
 			var router = new Router();
 			router.Map("/{path:*}").Get(NewHandler());
 
+			router.Lock(Sp);
+
 			// Act
 			var result = router.Match(Method.Get, path);
 
@@ -94,6 +104,8 @@ public partial class Match_Tests
 			var handler = NewHandler();
 			var (first, second) = (Rnd.Str, Rnd.Str);
 			router.Map("/{path:*}").Get(handler);
+
+			router.Lock(Sp);
 
 			// Act
 			var result = router.Match(Method.Get, $"/{first}/{second}");
@@ -112,6 +124,8 @@ public partial class Match_Tests
 			var root = NewHandler();
 			router.Map("/").Get(root);
 			router.Map("/{path:*}").Get(NewHandler());
+
+			router.Lock(Sp);
 
 			// Act
 			var result = router.Match(Method.Get, "/");

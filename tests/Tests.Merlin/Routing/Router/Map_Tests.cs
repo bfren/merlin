@@ -37,7 +37,7 @@ public class Map_Tests
 	{
 		// Arrange
 		var router = new Router();
-		router.Lock();
+		router.Lock(Substitute.For<IServiceProvider>());
 
 		// Act
 		var result = Record.Exception(() => router.Map("/posts"));

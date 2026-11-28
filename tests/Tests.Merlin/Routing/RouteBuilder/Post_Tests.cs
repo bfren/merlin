@@ -11,7 +11,7 @@ public class Post_Tests
 {
 	// adding a second handler for the same method and template throws only if the builder added the first
 	private static Exception? AddAgain(Router router, Template template, Method method) =>
-		Record.Exception(() => router.Add(method, template, Substitute.For<Handler>()));
+		Record.Exception(() => router.Add(method, template, Substitute.For<HandlerAsync>()));
 
 	[Fact]
 	public void Adds_Async_Handler_For_POST()
@@ -22,7 +22,7 @@ public class Post_Tests
 		var builder = new RouteBuilder(router, template);
 
 		// Act
-		builder.Post(Substitute.For<Handler>());
+		builder.Post(Substitute.For<HandlerAsync>());
 
 		// Assert
 		Assert.IsType<InvalidOperationException>(AddAgain(router, template, Method.Post));
@@ -37,7 +37,7 @@ public class Post_Tests
 		var builder = new RouteBuilder(router, template);
 
 		// Act
-		builder.Post(Substitute.For<Func<Req, Result<Reply>>>());
+		builder.Post(Substitute.For<Handler>());
 
 		// Assert
 		Assert.IsType<InvalidOperationException>(AddAgain(router, template, Method.Post));
@@ -53,7 +53,7 @@ public class Post_Tests
 		var other = Method.Post == Method.Get ? Method.Post : Method.Get;
 
 		// Act
-		builder.Post(Substitute.For<Handler>());
+		builder.Post(Substitute.For<HandlerAsync>());
 
 		// Assert
 		Assert.Null(AddAgain(router, template, other));
@@ -67,7 +67,7 @@ public class Post_Tests
 		var builder = router.Map("/posts");
 
 		// Act
-		var async = builder.Post(Substitute.For<Handler>());
+		var async = builder.Post(Substitute.For<HandlerAsync>());
 
 		// Assert
 		Assert.Same(builder, async);
@@ -81,9 +81,68 @@ public class Post_Tests
 		var builder = router.Map("/posts");
 
 		// Act
-		var sync = builder.Post(Substitute.For<Func<Req, Result<Reply>>>());
+		var sync = builder.Post(Substitute.For<Handler>());
 
 		// Assert
 		Assert.Same(builder, sync);
+	}
+
+	[Fact]
+	public void Adds_Factory_For_POST()
+	{
+		// Arrange
+		var router = new Router();
+		var template = Template.Parse("/posts", router.Types);
+		var builder = new RouteBuilder(router, template);
+
+		// Act
+		builder.Post(Substitute.For<HandlerFactory>());
+
+		// Assert
+		Assert.IsType<InvalidOperationException>(AddAgain(router, template, Method.Post));
+	}
+
+	[Fact]
+	public void Factory_Overload_Returns_Same_Builder()
+	{
+		// Arrange
+		var router = new Router();
+		var builder = router.Map("/posts");
+
+		// Act
+		var factory = builder.Post(Substitute.For<HandlerFactory>());
+
+		// Assert
+		Assert.Same(builder, factory);
+	}
+
+	[Fact]
+	public void Does_Not_Call_Factory()
+	{
+		// Arrange
+		var router = new Router();
+		var factory = Substitute.For<HandlerFactory>();
+
+		// Act
+		router.Map("/posts").Post(factory);
+
+		// Assert
+		Assert.Empty(factory.ReceivedCalls());
+	}
+
+	[Fact]
+	public void Lambda_Taking_Provider_Is_Added_As_Factory()
+	{
+		// Arrange
+		var router = new Router();
+		var sp = Substitute.For<IServiceProvider>();
+		IServiceProvider? received = null;
+
+		// Act
+		router.Map("/posts").Post(sp => { received = sp; return Substitute.For<HandlerAsync>(); });
+		router.Lock(sp);
+
+		// Assert
+		Assert.Same(sp, received);
 	}
 }

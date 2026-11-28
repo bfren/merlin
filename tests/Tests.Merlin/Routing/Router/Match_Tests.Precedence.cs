@@ -19,6 +19,8 @@ public partial class Match_Tests
 			router.Map("/posts/{slug}").Get(param);
 			router.Map("/posts/latest").Get(literal);
 
+			router.Lock(Sp);
+
 			// Act
 			var latest = router.Match(Method.Get, "/posts/latest");
 			var other = router.Match(Method.Get, "/posts/other");
@@ -37,6 +39,8 @@ public partial class Match_Tests
 			var untyped = NewHandler();
 			router.Map("/posts/{slug}").Get(untyped);
 			router.Map("/posts/{id:int}").Get(typed);
+
+			router.Lock(Sp);
 
 			// Act
 			var number = router.Match(Method.Get, "/posts/42");
@@ -61,6 +65,8 @@ public partial class Match_Tests
 			router.Map("/files/{path:*}").Get(catchAll);
 			router.Map("/files/readme").Get(literal);
 
+			router.Lock(Sp);
+
 			// Act
 			var readme = router.Match(Method.Get, "/files/readme");
 			var other = router.Match(Method.Get, "/files/other");
@@ -80,6 +86,8 @@ public partial class Match_Tests
 			router.Map("/a/latest/x").Get(literal);
 			router.Map("/a/{slug}/y").Get(param);
 
+			router.Lock(Sp);
+
 			// Act
 			var result = router.Match(Method.Get, "/a/latest/y");
 
@@ -97,6 +105,8 @@ public partial class Match_Tests
 			var catchAll = NewHandler();
 			router.Map("/files/{id:int}/info").Get(NewHandler());
 			router.Map("/files/{path:*}").Get(catchAll);
+
+			router.Lock(Sp);
 
 			// Act
 			var result = router.Match(Method.Get, "/files/42/download");
@@ -128,6 +138,8 @@ public partial class Match_Tests
 				router.Map("/x/{s:short}").Get(shortHandler);
 			}
 
+			router.Lock(Sp);
+
 			// Act
 			var result = router.Match(Method.Get, "/x/42");
 
@@ -150,6 +162,9 @@ public partial class Match_Tests
 			first.Map("/posts/{slug}").Get(paramA);
 			second.Map("/posts/{slug}").Get(paramB);
 			second.Map("/posts/latest").Get(literalB);
+
+			first.Lock(Sp);
+			second.Lock(Sp);
 
 			// Act
 			var a = first.Match(Method.Get, "/posts/latest");

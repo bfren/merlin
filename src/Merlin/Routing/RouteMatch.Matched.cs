@@ -8,6 +8,6 @@ namespace Merlin.Routing;
 /// <summary>
 /// The request matched a route.
 /// </summary>
-/// <param name="Handler">The route's handler.</param>
+/// <param name="Handler">The route's handler, resolved when the router was locked.</param>
 /// <param name="Values">Typed values captured from the path, keyed by parameter name.</param>
-public sealed record class Matched(Handler Handler, RouteValuesDictionary Values) : RouteMatch;
+public sealed record class Matched(HandlerAsync Handler, RouteValuesDictionary Values) : RouteMatch;

@@ -18,6 +18,8 @@ public partial class Match_Tests
 			var post = NewHandler();
 			router.Map("/posts").Get(get).Post(post);
 
+			router.Lock(Sp);
+
 			// Act
 			var getResult = router.Match(Method.Get, "/posts");
 			var postResult = router.Match(Method.Post, "/posts");
@@ -33,6 +35,8 @@ public partial class Match_Tests
 			// Arrange
 			var router = new Router();
 			router.Map("/posts").Get(NewHandler());
+
+			router.Lock(Sp);
 
 			// Act
 			var result = router.Match(Method.Wrap("get"), "/posts");
@@ -50,6 +54,8 @@ public partial class Match_Tests
 			var handler = NewHandler();
 			router.Map("/posts").Get(handler);
 
+			router.Lock(Sp);
+
 			// Act
 			var result = router.Match(Method.Head, "/posts");
 
@@ -64,6 +70,8 @@ public partial class Match_Tests
 			var router = new Router();
 			var handler = NewHandler();
 			router.Map("/posts/{id:int}").Get(handler);
+
+			router.Lock(Sp);
 
 			// Act
 			var result = router.Match(Method.Head, "/posts/42");
@@ -84,6 +92,8 @@ public partial class Match_Tests
 			router.Map("/posts").Get(get);
 			router.Map("/posts").Head(head);
 
+			router.Lock(Sp);
+
 			// Act
 			var headResult = router.Match(Method.Head, "/posts");
 			var getResult = router.Match(Method.Get, "/posts");
@@ -100,6 +110,8 @@ public partial class Match_Tests
 			var router = new Router();
 			router.Map("/posts").Post(NewHandler());
 
+			router.Lock(Sp);
+
 			// Act
 			var result = router.Match(Method.Head, "/posts");
 
@@ -115,6 +127,8 @@ public partial class Match_Tests
 			var router = new Router();
 			router.Map("/posts").Head(NewHandler());
 
+			router.Lock(Sp);
+
 			// Act
 			var result = router.Match(Method.Get, "/posts");
 
@@ -129,6 +143,8 @@ public partial class Match_Tests
 			// Arrange
 			var router = new Router();
 			router.Map("/posts").Get(NewHandler()).Put(NewHandler());
+
+			router.Lock(Sp);
 
 			// Act
 			var result = router.Match(Method.Delete, "/posts");
@@ -146,6 +162,8 @@ public partial class Match_Tests
 			router.Map("/posts").Get(NewHandler());
 			router.Map("/posts").Head(NewHandler());
 
+			router.Lock(Sp);
+
 			// Act
 			var result = router.Match(Method.Delete, "/posts");
 
@@ -161,6 +179,8 @@ public partial class Match_Tests
 			var router = new Router();
 			router.Map("/posts").Get(NewHandler());
 			router.Map("/other").Put(NewHandler());
+
+			router.Lock(Sp);
 
 			// Act
 			var result = router.Match(Method.Post, "/posts");

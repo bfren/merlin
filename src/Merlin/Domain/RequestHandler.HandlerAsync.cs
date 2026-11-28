@@ -8,8 +8,8 @@ using Wrap;
 namespace Merlin.Domain;
 
 /// <summary>
-/// Handles a request that matched a route.
+/// Handles a request that matched a route, asynchronously.
 /// </summary>
 /// <param name="req">The request.</param>
 /// <returns>The reply to send, or a failure.</returns>
-public delegate Task<Result<Reply>> Handler(Req req);
+public delegate Task<Result<Reply>> HandlerAsync(Req req);

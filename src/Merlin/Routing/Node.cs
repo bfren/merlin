@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using Merlin.Domain;
 
 namespace Merlin.Routing;
 
@@ -32,7 +31,7 @@ internal sealed class Node
 	public NodeCatchAll? CatchAll { get; set; }
 
 	/// <summary>
-	/// Handler of a route that ends at this node.
+	/// Route that ends at this node.
 	/// </summary>
-	public Handler? Handler { get; set; }
+	public NodeRoute? Route { get; set; }
 }

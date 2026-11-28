@@ -16,6 +16,8 @@ public partial class Match_Tests
 			var router = new Router();
 			router.Map("/posts").Get(NewHandler());
 
+			router.Lock(Sp);
+
 			// Act
 			var result = router.Match(Method.Get, "/other");
 
@@ -28,6 +30,8 @@ public partial class Match_Tests
 		{
 			// Arrange
 			var router = new Router();
+
+			router.Lock(Sp);
 
 			// Act
 			var result = router.Match(Method.Get, "/posts");
@@ -42,6 +46,8 @@ public partial class Match_Tests
 			// Arrange
 			var router = new Router();
 			router.Map("/posts");
+
+			router.Lock(Sp);
 
 			// Act
 			var result = router.Match(Method.Get, "/posts");

@@ -1,15 +1,20 @@
 // Merlin Test Applications
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
+using Merlin;
 using Merlin.Extensions;
 using Merlin.Replies;
+using Wrap;
 using Wrap.Linq;
 
-var app = new Merlin.App(args);
+var app = new App(args);
+
+static Task<Result<Reply>> Home(Req req) =>
+	Reply.Text("Home").AsTask();
 
 app.Router
 	.Map("/")
-		.Get(req => Reply.Text("Home"))
+		.Get(sp => req => Home(req))
 	.Map("/hello/{name}")
 		.Get(req =>
 			from name in req.Route<string>("name")
