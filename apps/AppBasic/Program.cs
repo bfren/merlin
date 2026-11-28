@@ -1,6 +1,7 @@
 // Merlin Test Applications
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
+using System.Text.Json.Serialization;
 using Merlin;
 using Merlin.Domain;
 using Merlin.Extensions;
@@ -9,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Wrap;
 using Wrap.Linq;
 
-var app = new App(args);
+var app = new App(args, AppJson.Default);
 app.Register<ISpeak, Speak>();
 
 static Task<Result<Reply>> Home(Req req) =>
@@ -27,7 +28,7 @@ app.Router
 	.Map("/hello/{name}")
 		.Get(sp => SayHello(sp.GetRequiredService<ISpeak>()))
 		.Post(req => from name in req.Route<string>("name")
-					 from json in Reply.Json(new { Hello = name })
+					 from json in Reply.Json(new Greeting(name))
 					 select json)
 ;
 
@@ -43,3 +44,8 @@ internal sealed class Speak : ISpeak
 	public Task<string> SayHello(string name) =>
 		Task.FromResult($"Hello, {name}!");
 }
+
+internal readonly record struct Greeting(string Hello);
+
+[JsonSerializable(typeof(Greeting))]
+internal partial class AppJson : JsonSerializerContext;
