@@ -17,9 +17,6 @@ namespace Merlin;
 /// </summary>
 public sealed record class Req
 {
-	internal WebApplication App =>
-		field;
-
 	internal HttpContext Http =>
 		field;
 
@@ -31,8 +28,7 @@ public sealed record class Req
 	/// <summary>
 	/// Logger for the application.
 	/// </summary>
-	public ILogger Logger =>
-		App.Logger;
+	public ILogger Logger { get; }
 
 	/// <summary>
 	/// HTTP method.
@@ -58,12 +54,6 @@ public sealed record class Req
 	public RouteValuesDictionary RouteValues { get; }
 
 	/// <summary>
-	/// Service provider for the application.
-	/// </summary>
-	public IServiceProvider Services =>
-		App.Services;
-
-	/// <summary>
 	/// Cancelled when the client disconnects.
 	/// </summary>
 	public CancellationToken Cancellation =>
@@ -76,6 +66,6 @@ public sealed record class Req
 	/// <param name="http">HTTP context for the current request.</param>
 	/// <param name="values">Route values captured by the router.</param>
 	/// <param name="json">JSON options used by binders.</param>
-	public Req(WebApplication app, HttpContext http, RouteValuesDictionary values, JsonSerializerOptions json) =>
-		(App, Http, RouteValues, JsonOptions) = (app, http, values, json);
+	public Req(HttpContext http, ILogger logger, RouteValuesDictionary values, JsonSerializerOptions json) =>
+		(Http, Logger, RouteValues, JsonOptions) = (http, logger, values, json);
 }
