@@ -2,8 +2,10 @@
 // Copyright (c) bfren - licensed under https://mit.bfren.dev/2022
 
 using System;
+using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using System.Threading.Tasks;
+using Merlin.Exceptions;
 using Wrap;
 
 namespace Merlin.Extensions;
@@ -21,7 +23,12 @@ public static partial class ReqExtensions
 	/// is empty, or cannot be deserialised.
 	/// </returns>
 	public static Task<Result<T>> Json<T>(this Req @this) =>
-		throw new NotImplementedException();
+		@this.JsonOptions.TryGetTypeInfo<T>(out var info)
+			? Json(@this, info)
+			: UnableToGetJsonTypeInfo(typeof(T)).AsTask<T>();
+
+	[Failure("Unable to get JSON type info for {type} - please register it before startup.")]
+	private static partial Failure UnableToGetJsonTypeInfo(Type type);
 
 	/// <summary>
 	/// Read the request body as JSON, using source-generated type information (AOT-safe).
@@ -32,6 +39,43 @@ public static partial class ReqExtensions
 	/// <returns>
 	/// The deserialised value, or a failure if the body is not JSON, is empty, or cannot be deserialised.
 	/// </returns>
-	public static Task<Result<T>> Json<T>(this Req @this, JsonTypeInfo<T> info) =>
-		throw new NotImplementedException();
+	public static Task<Result<T>> Json<T>(this Req @this, JsonTypeInfo<T> info)
+	{
+		var request = @this.Http.Request;
+
+		if (request.ContentType != "application/json")
+		{
+			return R.Fail("Request is not JSON.")
+				.WithKind(FailureKind.Invalid).AsTask<T>();
+		}
+
+		if (request.Body.Length == 0)
+		{
+			return R.Fail("Request body is empty.")
+				.WithKind(FailureKind.Invalid).AsTask<T>();
+		}
+
+		try
+		{
+			return JsonSerializer.Deserialize(request.Body, info) switch
+			{
+				T value =>
+					R.Wrap(value).AsTask(),
+
+				_ =>
+					throw new JsonNullException()
+			};
+		}
+		catch (JsonException ex)
+		{
+			return InvalidJson(ex.Path ?? "$").AsTask<T>();
+		}
+		catch (Exception ex)
+		{
+			return R.Fail(ex).WithMessage("Something went wrong.").AsTask<T>();
+		}
+	}
+
+	[Failure("Request body is not valid JSON at {Path}.", Kind = nameof(FailureKind.Invalid))]
+	private static partial Failure InvalidJson(string path);
 }
